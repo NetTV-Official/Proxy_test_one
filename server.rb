@@ -58,7 +58,6 @@ class TangoProxy < WEBrick::HTTPProxyServer
     host = req.host
 
     begin
-      # Handle .tango sites
       if host&.end_with?(".tango")
         if @routes[host]
           base = @routes[host]
@@ -80,8 +79,6 @@ class TangoProxy < WEBrick::HTTPProxyServer
           res.status = 404
           res.body = "<h1>404 - .tango site not found</h1>"
         end
-
-      # Handle search engines to filter banned keywords
       elsif req.request_method == "GET" && req.path.include?("search")
         uri = URI(req.request_uri.to_s)
         query = URI.decode_www_form(uri.query || "").to_h["q"].to_s.downcase
@@ -100,12 +97,10 @@ class TangoProxy < WEBrick::HTTPProxyServer
           super
         end
 
-      # All other requests
       elsif req.request_uri
         super
 
       else
-        # fallback search
         query = req.path.gsub("/", "")
         search_url = URI("https://duckduckgo.com/html/?q=#{query}")
         result = Net::HTTP.get(search_url)
@@ -132,5 +127,5 @@ server = TangoProxy.new(
 
 trap('INT') { server.shutdown }
 
-puts "Tango Proxy running on http://127.0.0.1:455".colorize(:green)
+puts "Tango Proxy running on http://127.0.0.1:#{Port}".colorize(:green)
 server.start
