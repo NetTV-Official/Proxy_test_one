@@ -1,4 +1,10 @@
 {
-  "home.tango": "Sites/index.html",
-  "help.tango": "Sites/help.html"
+  "home.tango": "sites/index.html",
+  "help.tango": "sites/help.html",
+  "tubi.tango": "sites/youtube.html",
+  "greentendo.tango": "sites/index1.html",
+  "talha.tango": "sites/typing.html",
+  "minecraft.tango": "sites/Warning.html",
+  "tangocraft.tango": "sites/WASM.html",
+  "cineby.tango": "https://www.cineby.sc"
 }
