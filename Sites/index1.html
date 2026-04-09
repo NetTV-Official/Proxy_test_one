@@ -1,0 +1,4535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GREENTENDO | Interactive Gameboy simulator</title>
+    <meta name="description" content="An interactive Game Boy simulator with classic games like Snake, Pong, and Space Invaders. Experience nostalgic gaming with authentic controls and visuals.">
+  
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/favicon/android-chrome-512x512.png">
+    <link rel="manifest" href="/favicon/webmanifest.json">
+    <meta name="theme-color" content="#10b981">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="GREENTENDO | Interactive Game Boy Simulator">
+    <meta property="og:description" content="An interactive Game Boy simulator with classic games like Snake, Pong, and Space Invaders. Experience nostalgic gaming with authentic controls and visuals.">
+    <meta property="og:image" content="https://i.ibb.co/kV4sQS0j/greentendo.jpg">
+    <meta property="og:url" content="https://saganaki22.github.io/Greentendo/">
+    <meta property="og:type" content="website">
+    
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="GREENTENDO | Interactive Game Boy Simulator">
+    <meta name="twitter:description" content="An interactive Game Boy simulator with classic games, authentic controls, and retro visuals. Play Snake, Pong, and Space Invaders!">
+    <meta name="twitter:image" content="https://i.ibb.co/kV4sQS0j/greentendo.jpg">
+    
+    <style>
+        /* Base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #10b981; /* teal-500 */
+            display: flex;
+            min-height: 100vh;
+            justify-content: center;
+            align-items: center;
+        }
+
+        main {
+            display: flex;
+            min-height: 100vh;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+
+        /* Slider styles */
+        .size-control {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            z-index: 1000;
+        }
+        
+        .size-slider {
+            width: 200px;
+            cursor: pointer;
+        }
+
+        .size-control span {
+            color: #fff;
+        }
+
+        /* Smooth transition for scaling */
+        .gameboy {
+            position: relative;
+            width: 280px;
+            height: 460px;
+            background-color: #FFFFFF; /* Pure white */
+            border-radius: 12px;
+            border-bottom-right-radius: 35px; /* Slightly more rounded corner */
+            box-shadow: 0 10px 15px -5px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: transform 0.3s ease-in-out;
+        }
+
+        /* Top section with screen */
+        .gameboy-top {
+            position: relative;
+            width: 100%;
+            height: 240px;
+            background-color: #444444;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            border-bottom-right-radius: 0; /* Remove rounded bottom */
+        }
+
+        /* Remove the incorrect white curve */
+        .gameboy-top::after {
+            display: none;
+        }
+
+        /* Screen label adjustments */
+        .screen-label {
+            color: #CCCCCC;
+            font-size: 8px;
+            margin-bottom: 0.8rem;
+            text-align: center;
+        }
+
+        /* Power LED positioning */
+        .power-led {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #777777; /* Greyish color when off */
+            transition: background-color 0.3s;
+        }
+
+        .power-led.on {
+            background-color: #FFA500; /* Amber/orange when on */
+        }
+
+        /* Screen area container - centered properly */
+        .screen-area {
+            flex: 1;
+            background-color: #333333;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 0 auto;
+            width: 85%; /* Adjusted width for proper centering */
+            max-height: 180px;
+            box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.3);
+        }
+
+        /* Actual screen - restore green color */
+        .screen {
+            width: 100%;
+            height: 100%;
+            background-color: #8BAC0F; /* Classic Game Boy green */
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Fix the game content positioning */
+        #game-screen {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+        }
+
+        /* Remove any CRT or scan effects */
+        .screen::before, .screen::after,
+        .crt-screen::before, .crt-screen::after {
+            display: none;
+        }
+
+        /* Fix power button position - bottom left */
+        .power-button {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #4CAF50;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            cursor: pointer;
+            z-index: 5;
+            transition: background-color 0.3s, color 0.3s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .power-button.on {
+            background-color: #3CB371; /* Medium sea green */
+            color: white;
+        }
+
+        /* Ensure proper control spacing */
+        .gameboy-controls {
+            position: relative;
+            width: 100%;
+            padding-top: 0;
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            background-color: #FFFFFF; /* Pure white to match body */
+        }
+
+        /* Controls section */
+        .controls-top {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+            padding-left: 1rem;
+            padding-right: 1rem;
+            margin-top: 25px;
+        }
+
+        /* D-pad */
+        .dpad {
+            position: relative;
+            width: 90px;
+            height: 90px;
+            background-color: #E0E0E0; /* Light gray background */
+            border-radius: 50%;
+            overflow: visible;
+            margin-left: 5px;
+        }
+
+        .dpad::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+        }
+
+        /* D-pad cross part */
+        .dpad-cross {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 72px; /* 1.5x larger */
+            height: 72px; /* 1.5x larger */
+            pointer-events: none; /* Let clicks pass through */
+        }
+
+        .dpad-cross::before, .dpad-cross::after {
+            content: "";
+            position: absolute;
+            background-color: #000000; /* Pure black */
+            pointer-events: none; /* Let clicks pass through */
+        }
+
+        .dpad-cross::before {
+            width: 72px; /* 1.5x larger */
+            height: 24px; /* 1.5x larger */
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            border-radius: 3px; /* Slightly rounded edges */
+        }
+
+        .dpad-cross::after {
+            width: 24px; /* 1.5x larger */
+            height: 72px; /* 1.5x larger */
+            left: 50%;
+            top: 0;
+            transform: translateX(-50%);
+            border-radius: 3px; /* Slightly rounded edges */
+        }
+
+        /* Improved d-pad buttons with larger clickable area */
+        .dpad-up, .dpad-right, .dpad-down, .dpad-left {
+            position: absolute;
+            width: 35px;
+            height: 35px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            z-index: 5; /* Ensure it's above other elements */
+        }
+
+        .dpad-up {
+            top: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dpad-right {
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .dpad-down {
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dpad-left {
+            left: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        /* Add these rules to prevent button focus highlighting */
+        button {
+            outline: none !important; /* Remove outline on focus */
+        }
+
+        button:focus {
+            outline: none !important; /* Ensure no focus outline in all browsers */
+        }
+
+        /* Ensure only pressed state shows visual feedback for d-pad */
+        .dpad-up:active, .dpad-right:active, .dpad-down:active, .dpad-left:active {
+            opacity: 0.7;
+            background-color: rgba(100, 100, 100, 0.3); /* Subtle feedback */
+            border-radius: 4px;
+        }
+
+        /* Reset any focus styles that might persist */
+        .dpad-up:focus, .dpad-right:focus, .dpad-down:focus, .dpad-left:focus {
+            opacity: 1;
+            background-color: transparent;
+        }
+
+        /* Ensure A/B buttons only transform during active press */
+        .a-button:active, .b-button:active {
+            background-color: #cc0044; /* Darker red when pressed */
+            transform: translateY(3px); /* Increased for better visual feedback */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+
+        /* Reset any transform that might persist */
+        .a-button:focus, .b-button:focus {
+            transform: none;
+        }
+
+        /* Ensure Start/Select buttons only transform during active press */
+        .start-button:active, .select-button:active {
+            background-color: #666666; /* Darker when pressed */
+            transform: rotate(-25deg) translateY(2px); /* Keep rotation while providing feedback */
+        }
+
+        /* Reset any transform that might persist */
+        .start-button:focus, .select-button:focus {
+            transform: rotate(-25deg);
+        }
+
+        /* A/B buttons */
+        .action-buttons {
+            position: relative;
+            width: 108px;
+            height: 72px; /* Increased height to accommodate positioning */
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-right: 5px;
+        }
+
+        /* Remove old labels */
+        .a-label, .b-label {
+            display: none;
+        }
+
+        /* Style buttons with letters directly on them */
+        .a-button, .b-button {
+            width: 40px;
+            height: 40px;
+            background-color: #FF1A75; /* Brighter magenta to match image */
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: white;
+            font-size: 12px;
+            z-index: 5; /* Ensure clickability */
+        }
+
+        .a-button {
+            right: 0;
+            top: 0;
+        }
+
+        .b-button {
+            right: 45px;
+            top: 30px;
+        }
+
+        .b-button::after {
+            content: "B";
+        }
+
+        .a-button::after {
+            content: "A";
+        }
+
+        .a-button:hover, .b-button:hover {
+            background-color: #FF3377; /* Lighter red */
+        }
+
+        /* START and SELECT button alignment with diagonal orientation */
+        .start-select {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+            position: relative;
+        }
+
+        .start-button, .select-button {
+            width: 54px;
+            height: 16px;
+            background-color: #999999;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-size: 9px;
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(-25deg); /* Restore diagonal orientation */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: bold;
+            position: relative;
+            z-index: 5;
+        }
+
+        .start-button:hover, .select-button:hover {
+            background-color: #888888;
+        }
+
+        .start-button:active, .select-button:active {
+            background-color: #777777;
+            transform: rotate(-25deg) translateY(2px);
+        }
+
+        /* Position adjustment to ensure proper alignment */
+        .select-button {
+            left: -5px;
+        }
+
+        .start-button {
+            right: -5px;
+        }
+
+        /* Adjust speaker lines position and appearance */
+        .speaker-lines {
+            position: absolute;
+            bottom: 1.8rem;
+            right: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transform: rotate(-15deg); /* Slight angle to match image */
+        }
+
+        .speaker-line {
+            width: 22px;
+            height: 1.5px;
+            background-color: #DDDDDD;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+            }
+            to {
+                opacity: 0;
+            }
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideDownLogo {
+            from {
+                transform: translateY(-100%);
+            }
+            to {
+                transform: translateY(100%);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.5s forwards;
+        }
+
+        .animate-fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+
+        .animate-slide-down {
+            animation: slideDown 0.8s forwards;
+        }
+
+        .animate-slide-down-logo {
+            animation: slideDownLogo 1.5s forwards;
+        }
+
+        /* Nintendo logo */
+        .nintendo-logo {
+            position: relative;
+            height: 3rem;
+            width: 8rem;
+            border: 2px solid #0f380f;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        .boot-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #9bbc0f;
+        }
+
+        /* GitHub button styles */
+        .github-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 32px;
+            height: 32px;
+            cursor: pointer;
+            z-index: 1000;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23fff' d='M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z'/%3E%3C/svg%3E");
+            background-size: contain;
+            background-repeat: no-repeat;
+            transition: transform 0.3s ease;
+        }
+
+        body.light-mode .github-button {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z'/%3E%3C/svg%3E");
+        }
+
+        .github-button:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <a href="https://github.com/Saganaki22/Greentendo" class="github-button" target="_blank" rel="noopener noreferrer"></a>
+        <div class="gameboy">
+            <!-- Top section with screen -->
+            <div class="gameboy-top">
+                <div class="screen-label">GREENTENDO</div>
+                
+                <!-- Power LED -->
+                <div class="power-led"></div>
+                
+                <!-- Screen area with inset -->
+                <div class="screen-area">
+                    <!-- Screen with scanline effect and curvature -->
+                    <div class="screen" id="game-screen"></div>
+                </div>
+            </div>
+
+            <!-- Controls section -->
+            <div class="gameboy-controls">
+                <div class="controls-top">
+                    <!-- D-pad -->
+                    <div class="dpad">
+                        <div class="dpad-cross"></div>
+                        <button class="dpad-up" id="dpad-up" aria-label="Up"></button>
+                        <button class="dpad-right" id="dpad-right" aria-label="Right"></button>
+                        <button class="dpad-down" id="dpad-down" aria-label="Down"></button>
+                        <button class="dpad-left" id="dpad-left" aria-label="Left"></button>
+                    </div>
+
+                    <!-- A/B buttons -->
+                    <div class="action-buttons">
+                        <button class="b-button" id="b-button" aria-label="B button"></button>
+                        <button class="a-button" id="a-button" aria-label="A button"></button>
+                    </div>
+                </div>
+
+                <!-- Start/Select buttons -->
+                <div class="start-select">
+                    <button class="select-button" id="select-button" aria-label="Select button">SELECT</button>
+                    <button class="start-button" id="start-button" aria-label="Start button">START</button>
+                </div>
+
+                <!-- Speaker lines -->
+                <div class="speaker-lines">
+                    <div class="speaker-line"></div>
+                    <div class="speaker-line"></div>
+                    <div class="speaker-line"></div>
+                    <div class="speaker-line"></div>
+                    <div class="speaker-line"></div> <!-- Added one more line to better match the image -->
+                </div>
+
+                <!-- Power button -->
+                <button class="power-button" id="power-button" aria-label="Power button">
+                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+                        <line x1="12" y1="2" x2="12" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Size control slider -->
+        <div class="size-control">
+            <span>Scale:</span>
+            <input type="range" min="50" max="200" value="100" class="size-slider" id="size-slider">
+        </div>
+    </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fun console message for curious developers
+    console.log('%cHey you scoundrel... i see you opened the devlog... remember to credit Saganaki22', 'color: #10b981; font-size: 14px; font-weight: bold;');
+
+    // DOM Elements
+    const gameScreen = document.getElementById('game-screen');
+    const powerButton = document.getElementById('power-button');
+    const powerLed = document.querySelector('.power-led');
+    const aButton = document.getElementById('a-button');
+    const bButton = document.getElementById('b-button');
+    const startButton = document.getElementById('start-button');
+    const selectButton = document.getElementById('select-button');
+    const dpadUp = document.getElementById('dpad-up');
+    const dpadDown = document.getElementById('dpad-down');
+    const dpadLeft = document.getElementById('dpad-left');
+    const dpadRight = document.getElementById('dpad-right');
+    const sizeSlider = document.getElementById('size-slider');
+    const gameboyElement = document.querySelector('.gameboy');
+
+    // Size slider handler
+    sizeSlider.addEventListener('input', function() {
+        const scale = this.value / 100;
+        gameboyElement.style.transform = `scale(${scale})`;
+    });
+
+    // Game state
+    let isPoweredOn = false;
+    let isShuttingDown = false;
+    let bootStage = 0;
+    let bootSequenceComplete = false;
+    let currentGame = "menu";
+    let isPaused = false;
+    let selectedMenuItem = 0;
+    let menuItems = ["space-invaders", "snake", "pong", "tetris", "breakout", "golf", "aceclimber"];
+    let canvas, ctx;
+    let gameLoopId = null;
+    let keyboardControlsActive = false;
+    let menuPage = 0; // Current page in the menu
+    let itemsPerPage = 4; // Number of items to show per page
+
+    // Initialize the canvas
+    function initCanvas() {
+        canvas = document.createElement('canvas');
+        canvas.width = 150;
+        canvas.height = 160;
+        canvas.className = 'game-canvas';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        gameScreen.innerHTML = '';
+        gameScreen.appendChild(canvas);
+        ctx = canvas.getContext('2d');
+        return ctx;
+    }
+
+    // Create a function to play a simple beep sound using Web Audio API
+    function playBootSound() {
+        try {
+            // Create audio context
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            
+            // Create oscillator
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            // Configure sound
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(1046.50, audioCtx.currentTime); // C6
+            gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            
+            // Connect nodes
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Play sound
+            oscillator.start();
+            
+            // Schedule the frequency changes
+            setTimeout(() => {
+                oscillator.frequency.setValueAtTime(1318.51, audioCtx.currentTime); // E6
+            }, 100);
+            
+            setTimeout(() => {
+                oscillator.frequency.setValueAtTime(1567.98, audioCtx.currentTime); // G6
+            }, 200);
+            
+            // Stop after a short duration
+            setTimeout(() => {
+                oscillator.stop();
+            }, 300);
+        } catch (e) {
+            console.error("Could not create audio:", e);
+            // Continue without sound
+        }
+    }
+    
+    // Game sound effects utility function
+    function playGameSound(soundType) {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            // Connect nodes
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Configure sound based on type
+            switch(soundType) {
+                case 'pong-paddle':
+                    // Higher pitched 'bip' sound
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    setTimeout(() => oscillator.stop(), 50);
+                    break;
+                    
+                case 'snake-eat':
+                    // Satisfying 'gulp' sound
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime + 0.05);
+                    }, 50);
+                    setTimeout(() => oscillator.stop(), 150);
+                    break;
+                    
+                case 'space-shoot':
+                    // Retro laser sound
+                    oscillator.type = 'sawtooth';
+                    oscillator.frequency.setValueAtTime(1200, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    // Quick frequency drop for laser effect
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(600, audioCtx.currentTime);
+                    }, 30);
+                    setTimeout(() => oscillator.stop(), 80);
+                    break;
+            }
+            
+            // Start the sound
+            oscillator.start();
+            
+        } catch (e) {
+            console.error("Could not create game sound:", e);
+            // Continue without sound
+        }
+    }
+
+    // Initialize the simulator
+    function init() {
+        // Event listeners for controls
+        powerButton.addEventListener('click', (e) => {
+            handlePowerClick();
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        // Fix A button to ensure it works properly
+        aButton.addEventListener('click', (e) => {
+            if (!isPoweredOn || isShuttingDown) return;
+            
+            // Handle menu selection or game action
+            if (currentGame === "menu") {
+                currentGame = menuItems[selectedMenuItem];
+                startGame(currentGame);
+            } else if (isPaused) {
+                // In pause menu
+                if (selectedMenuItem === 0) {
+                    isPaused = false;
+                    renderScreen();
+                } else {
+                    currentGame = "menu";
+                    isPaused = false;
+                    renderScreen();
+                }
+            } else {
+                // In-game action - handle based on current game
+                handleButtonClick('a');
+            }
+            
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        // Make B button act as escape/back
+        bButton.addEventListener('click', (e) => {
+            if (!isPoweredOn || isShuttingDown) return;
+            
+            if (currentGame !== "menu") {
+                if (isPaused) {
+                    // If already in pause menu, go back to menu
+                    currentGame = "menu";
+                    isPaused = false;
+                    renderScreen();
+                } else {
+                    // Pause the game (acts as escape)
+                    isPaused = true;
+                    renderScreen();
+                }
+            }
+            
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        // Start button click handler - modified to check game over states
+        startButton.addEventListener('click', (e) => {
+            if (!isPoweredOn || isShuttingDown) return;
+            
+            // Check game over states first
+            if ((currentGame === "snake" && snakeGameOver) || 
+                (currentGame === "pong" && pongGameOver) || 
+                (currentGame === "space-invaders" && siShowEndScreen)) {
+                // In game over screens, Start button acts like A button
+                if (currentGame === "snake") {
+                    if (snakeSelectedOption === 0) {
+                        initSnake(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                } else if (currentGame === "pong") {
+                    if (pongSelectedOption === 0) {
+                        initPong(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                } else if (currentGame === "space-invaders") {
+                    if (siSelectedEndOption === 0) {
+                        initSpaceInvaders(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                }
+                return;
+            }
+            
+            if (currentGame === "menu") {
+                // Act as Enter/A button in menu
+                currentGame = menuItems[selectedMenuItem];
+                startGame(currentGame);
+            } else {
+                // Toggle pause state during gameplay
+                isPaused = !isPaused;
+                renderScreen();
+            }
+            
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        // Other button listeners
+        selectButton.addEventListener('click', (e) => {
+            handleButtonClick('select');
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        dpadUp.addEventListener('click', (e) => {
+            handleButtonClick('up');
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        dpadDown.addEventListener('click', (e) => {
+            handleButtonClick('down');
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        dpadLeft.addEventListener('click', (e) => {
+            handleButtonClick('left');
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        dpadRight.addEventListener('click', (e) => {
+            handleButtonClick('right');
+            e.currentTarget.blur(); // Remove focus after click
+        });
+        
+        // Add global touch event handler to prevent stuck button states
+        document.addEventListener('touchend', function() {
+            // Reset all button states when touch ends
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach(button => {
+                button.blur();
+            });
+        });
+        
+        // Initial render
+        renderScreen();
+    }
+
+    // Improve keyboard controls setup to handle keyup events
+    function setupKeyboardControls() {
+        if (keyboardControlsActive) return;
+        
+        keyboardControlsActive = true;
+        document.addEventListener('keydown', handleKeyDown);
+        
+        // Add keyup handler to reset button states
+        document.addEventListener('keyup', function() {
+            // Ensure no buttons remain in active/focused state after key is released
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach(button => {
+                button.blur();
+            });
+        });
+    }
+
+    // Update removeKeyboardControls to also remove the keyup listener
+    function removeKeyboardControls() {
+        if (!keyboardControlsActive) return;
+        
+        keyboardControlsActive = false;
+        document.removeEventListener('keydown', handleKeyDown);
+        document.removeEventListener('keyup', function() {
+            const allButtons = document.querySelectorAll('button');
+            allButtons.forEach(button => {
+                button.blur();
+            });
+        });
+    }
+
+    // Power button click handler
+    function handlePowerClick() {
+        if (isPoweredOn) {
+            shutDown();
+        } else {
+            powerOn();
+        }
+    }
+
+    // Power on sequence
+    function powerOn() {
+        isPoweredOn = true;
+        powerLed.classList.add('on');
+        powerButton.classList.add('on');
+        gameScreen.classList.add('crt-screen');
+        bootStage = 0;
+        bootSequenceComplete = false;
+        setupKeyboardControls();
+        bootSequence();
+    }
+
+    // Shutdown sequence
+    function shutDown() {
+        isShuttingDown = true;
+        renderScreen();
+        
+        // Stop Tetris music if playing
+        if (tetrisMusicPlaying) {
+            stopTetrisMusic();
+        }
+        
+        setTimeout(() => {
+            isShuttingDown = false;
+            isPoweredOn = false;
+            bootStage = 0;
+            bootSequenceComplete = false;
+            powerLed.classList.remove('on');
+            powerButton.classList.remove('on');
+            gameScreen.classList.remove('crt-screen');
+            removeKeyboardControls();
+            
+            if (gameLoopId) {
+                cancelAnimationFrame(gameLoopId);
+                gameLoopId = null;
+            }
+            
+            renderScreen();
+        }, 800);
+    }
+
+    // Boot sequence animation
+    function bootSequence() {
+        if (bootStage === 0) {
+            renderScreen();
+            setTimeout(() => {
+                bootStage = 1;
+                bootSequence();
+            }, 800);
+        } else if (bootStage === 1) {
+            renderScreen();
+            setTimeout(() => {
+                bootStage = 2;
+                playBootSound(); // Use our custom audio function
+                bootSequence();
+            }, 1200);
+        } else if (bootStage === 2) {
+            renderScreen();
+            setTimeout(() => {
+                bootSequenceComplete = true;
+                currentGame = "menu";
+                isPaused = false;
+                selectedMenuItem = 0;
+                renderScreen();
+                startGameLoop();
+            }, 800);
+        }
+    }
+
+    // Handle keyboard input
+    function handleKeyDown(e) {
+        if (!isPoweredOn || isShuttingDown) return;
+
+        // Check if we're in a game over state first
+        const inGameOverScreen = (currentGame === "snake" && snakeGameOver) || 
+                               (currentGame === "pong" && pongGameOver) || 
+                               (currentGame === "space-invaders" && siGameOver) ||
+                               (currentGame === "tetris" && tetrisGameOver) ||
+                               (currentGame === "breakout" && breakoutGameOver) ||
+                               (currentGame === "golf" && golfGameOver) ||
+                               (currentGame === "aceclimber" && aceClimberGameOver);
+
+        // Special keys that may have multiple functions
+        const isAKey = e.key === "a";
+
+        // In active games, 'a' key should function as D-pad left as first priority
+        // For navigation/menus/game-over screens, 'a' key should still function as A button
+        if (isAKey && !inGameOverScreen && !isPaused && currentGame !== "menu") {
+            // For Snake, Pong, and Space Invaders, use 'a' as left movement
+            if (currentGame === "snake") {
+                if (!snakeGameOver && snakeDirection !== "right") {
+                    snakeDirection = "left";
+                }
+                return;
+            } else if (currentGame === "pong") {
+                if (!pongGameOver) {
+                    playerPaddle.x = Math.max(0, playerPaddle.x - 20);
+                }
+                return;
+            } else if (currentGame === "space-invaders") {
+                if (!siGameOver && !siShowEndScreen) {
+                    siPlayer.x = Math.max(0, siPlayer.x - 5);
+                }
+                return;
+            }
+        }
+
+        // In game over screens, Enter/Space/Escape should all act as selection buttons, not pause
+        if (inGameOverScreen) {
+            // For AceClimber, let handleAceClimberControls take care of game over navigation
+            if (currentGame === "aceclimber") {
+                // Skip global handling and let handleAceClimberControls handle it
+                handleAceClimberControls(e.key);
+                return;
+            }
+            
+            if (e.key === "Enter" || e.key === " " || e.key === "a") {
+                // Act as selection/confirm
+                if (currentGame === "snake") {
+                    if (snakeSelectedOption === 0) {
+                        initSnake(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                } else if (currentGame === "pong") {
+                    if (pongSelectedOption === 0) {
+                        initPong(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                } else if (currentGame === "space-invaders") {
+                    if (siSelectedEndOption === 0) {
+                        initSpaceInvaders(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                } else if (currentGame === "aceclimber") {
+                    if (aceClimberSelectedOption === 0) {
+                        initAceClimber(); // Retry
+                    } else {
+                        currentGame = "menu"; // Exit to menu
+                        renderScreen();
+                    }
+                }
+                return;
+            }
+            
+            if (e.key === "Escape" || e.key === "Backspace" || e.key === "b") {
+                // Act as "Exit to Menu" shortcut
+                currentGame = "menu";
+                renderScreen();
+                return;
+            }
+            
+            // Allow navigation in game over screens
+            if (currentGame === "snake") {
+                if (e.key === "ArrowUp" || e.key === "w" || e.key === "ArrowDown" || e.key === "s") {
+                    snakeSelectedOption = snakeSelectedOption === 0 ? 1 : 0;
+                    renderSnake();
+                }
+                return;
+            } else if (currentGame === "pong") {
+                if (e.key === "ArrowUp" || e.key === "w" || e.key === "ArrowDown" || e.key === "s") {
+                    pongSelectedOption = pongSelectedOption === 0 ? 1 : 0;
+                    renderPong();
+                }
+                return;
+            } else if (currentGame === "space-invaders") {
+                if (e.key === "ArrowUp" || e.key === "w" || e.key === "ArrowDown" || e.key === "s") {
+                    siSelectedEndOption = siSelectedEndOption === 0 ? 1 : 0;
+                    renderSpaceInvaders();
+                }
+                return;
+            } else if (currentGame === "aceclimber") {
+                if (e.key === "ArrowUp" || e.key === "w" || e.key === "ArrowDown" || e.key === "s") {
+                    aceClimberSelectedOption = aceClimberSelectedOption === 0 ? 1 : 0;
+                    renderAceClimber();
+                }
+                return;
+            }
+        }
+
+        // Normal control flow for active gameplay
+        if (e.key === "Escape" || e.key === "Backspace" || e.key === "b") {
+            // B button functionality - back/escape
+            if (currentGame !== "menu") {
+                if (isPaused) {
+                    currentGame = "menu";
+                    isPaused = false;
+                    renderScreen();
+                } else {
+                    isPaused = true;
+                    renderScreen();
+                }
+            }
+            return;
+        }
+        
+        if (e.key === "Enter") {
+            // Start button also acts like A button, not just pause/select
+            if (currentGame === "menu") {
+                currentGame = menuItems[selectedMenuItem];
+                startGame(currentGame);
+            } else if (inGameOverScreen) {
+                // In game over screen, Enter acts like A button
+                handleGameOverAction();
+            } else {
+                // If not in game over, Enter acts like the start button (pause/resume game)
+                isPaused = !isPaused;
+                renderScreen();
+            }
+            return;
+        }
+        
+        if (e.key === " " || (isAKey && (isPaused || currentGame === "menu" || inGameOverScreen))) {
+            // A button functionality - select/action
+            // Space now acts as A button in game over screens too
+            
+            // In game over screen, handle like A button
+            if (inGameOverScreen) {
+                handleGameOverAction();
+                return;
+            }
+            
+            if (currentGame === "menu") {
+                currentGame = menuItems[selectedMenuItem];
+                startGame(currentGame);
+            } else if (isPaused) {
+                if (selectedMenuItem === 0) {
+                    isPaused = false;
+                    renderScreen();
+                } else {
+                    currentGame = "menu";
+                    isPaused = false;
+                    renderScreen();
+                }
+            } else if (currentGame === "space-invaders" && !siGameOver && !siShowEndScreen) {
+                // Special case for Space Invaders - in active gameplay, Space is still used for shooting
+                if (siBullets.length < 3) {
+                    siBullets.push({
+                        x: siPlayer.x + siPlayer.width / 2 - 1,
+                        y: siPlayer.y - 5,
+                        width: 2,
+                        height: 5
+                    });
+                    // Play shooting sound
+                    playGameSound('space-shoot');
+                }
+            }
+            return;
+        }
+
+        // Handle paused controls
+        if (isPaused) {
+            handlePausedControls(e.key);
+            return;
+        }
+
+        if (currentGame === "menu") {
+            handleMenuControls(e.key);
+        } else if (currentGame === "snake") {
+            handleSnakeControls(e.key);
+        } else if (currentGame === "pong") {
+            handlePongControls(e.key);
+        } else if (currentGame === "space-invaders") {
+            handleSpaceInvadersControls(e.key);
+        } else if (currentGame === "tetris") {
+            handleTetrisControls(e.key);
+        } else if (currentGame === "breakout") {
+            handleBreakoutControls(e.key);
+        } else if (currentGame === "golf") {
+            handleGolfControls(e.key);
+        } else if (currentGame === "aceclimber") {
+            handleAceClimberControls(e.key);
+        } else if (currentGame === "pipemania") {
+            handlePipeManiaControls(e.key);
+        }
+    }
+
+    // Handle controls when paused
+    function handlePausedControls(key) {
+        if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+            selectedMenuItem = (selectedMenuItem === 0) ? 1 : 0;
+            renderScreen();
+        } else if (key === "a" || key === "Enter" || key === " ") {
+            if (selectedMenuItem === 0) {
+                isPaused = false;
+                
+                // Resume Tetris music if needed
+                if (currentGame === "tetris" && !tetrisMusicPlaying && tetrisMusicEnabled) {
+                    startTetrisMusic();
+                }
+                
+                renderScreen();
+            } else {
+                currentGame = "menu";
+                isPaused = false;
+                
+                // Stop Tetris music if active
+                if (tetrisMusicPlaying) {
+                    stopTetrisMusic();
+                }
+                
+                renderScreen();
+            }
+        }
+    }
+
+    // Define a function to handle menu navigation (up or down)
+    function navigateMenu(direction) {
+        const pageStart = menuPage * itemsPerPage;
+        const pageEnd = Math.min(pageStart + itemsPerPage - 1, menuItems.length - 1);
+        
+        if (direction === "up") {
+            if (selectedMenuItem === pageStart && menuPage > 0) {
+                // Go to the previous page and select the last item on that page
+                menuPage--;
+                const lastItemOnPage = Math.min((menuPage + 1) * itemsPerPage - 1, menuItems.length - 1);
+                selectedMenuItem = lastItemOnPage;
+            } else if (selectedMenuItem > pageStart) {
+                // Regular up navigation within the current page
+                selectedMenuItem = selectedMenuItem - 1;
+            } else {
+                // Wrap to the bottom of the current page
+                selectedMenuItem = pageEnd;
+            }
+        } else if (direction === "down") {
+            if (selectedMenuItem === pageEnd && pageEnd < menuItems.length - 1) {
+                // Go to the next page and select the first item on that page
+                menuPage++;
+                selectedMenuItem = menuPage * itemsPerPage;
+            } else if (selectedMenuItem < pageEnd) {
+                // Regular down navigation within the current page
+                selectedMenuItem = selectedMenuItem + 1;
+            } else {
+                // Wrap to the top of the current page
+                selectedMenuItem = pageStart;
+            }
+        }
+        
+        renderScreen();
+    }
+
+    // Handle controls in menu - use the common navigate function
+    function handleMenuControls(key) {
+        if (key === "ArrowUp" || key === "w") {
+            navigateMenu("up");
+        } else if (key === "ArrowDown" || key === "s") {
+            navigateMenu("down");
+        } else if (key === "a" || key === "Enter" || key === " ") {
+            currentGame = menuItems[selectedMenuItem];
+            startGame(currentGame);
+        }
+    }
+
+    // Handle Snake controls
+    function handleSnakeControls(key) {
+        if (snakeGameOver) return;
+        
+        if ((key === "ArrowUp" || key === "w") && snakeDirection !== "down") snakeDirection = "up";
+        else if ((key === "ArrowDown" || key === "s") && snakeDirection !== "up") snakeDirection = "down";
+        else if (key === "ArrowLeft" && snakeDirection !== "right") snakeDirection = "left";
+        else if ((key === "ArrowRight" || key === "d") && snakeDirection !== "left") snakeDirection = "right";
+    }
+
+    // Handle Pong controls
+    function handlePongControls(key) {
+        if (pongGameOver) return;
+        
+        // Increased paddle speed from 10 to 20
+        if (key === "ArrowLeft") {
+            playerPaddle.x = Math.max(0, playerPaddle.x - 20);
+        } else if ((key === "ArrowRight" || key === "d")) {
+            playerPaddle.x = Math.min(150 - playerPaddle.width, playerPaddle.x + 20);
+        }
+    }
+
+    // Handle Space Invaders controls
+    function handleSpaceInvadersControls(key) {
+        if (siShowEndScreen) {
+            if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+                siSelectedEndOption = (siSelectedEndOption === 0) ? 1 : 0;
+            } else if (key === "a" || key === "Enter" || key === " ") {
+                if (siSelectedEndOption === 0) {
+                    initSpaceInvaders();
+                } else if (siSelectedEndOption === 1) {
+                    currentGame = "menu";
+                    renderScreen();
+                }
+            }
+            return;
+        }
+
+        if (key === "ArrowLeft") {
+            siPlayer.x = Math.max(0, siPlayer.x - 5);
+        } else if ((key === "ArrowRight" || key === "d")) {
+            siPlayer.x = Math.min(150 - siPlayer.width, siPlayer.x + 5);
+        } else if ((key === " " || key === "Enter") && !siGameOver) {
+            if (siBullets.length < 3) {
+                siBullets.push({
+                    x: siPlayer.x + siPlayer.width / 2 - 1,
+                    y: siPlayer.y - 5,
+                    width: 2,
+                    height: 5
+                });
+                // Play shooting sound
+                playGameSound('space-shoot');
+            }
+        }
+    }
+
+    // Handle Tetris controls
+    function handleTetrisControls(key) {
+        // Implement Tetris controls logic
+        console.log("Tetris key pressed:", key);
+    }
+
+    // Handle Breakout controls
+    function handleBreakoutControls(key) {
+        if (breakoutGameOver) {
+            if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+                breakoutSelectedOption = breakoutSelectedOption === 0 ? 1 : 0;
+            } else if (key === "Enter" || key === " " || key === "a") {
+                if (breakoutSelectedOption === 0) {
+                    initBreakout(); // Restart
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            }
+            return;
+        }
+        
+        if (key === "ArrowLeft" || key === "a") {
+            breakoutPaddle.x = Math.max(0, breakoutPaddle.x - 20); // Increased from 10 to 20
+        } else if (key === "ArrowRight" || key === "d") {
+            breakoutPaddle.x = Math.min(150 - breakoutPaddle.width, breakoutPaddle.x + 20); // Increased from 10 to 20
+        } else if (key === " " || key === "Enter" || key === "w" || key === "ArrowUp") {
+            if (!breakoutBallMoving) {
+                launchBreakoutBall();
+            }
+        }
+    }
+
+    // Handle Ace Climber controls
+    function handleAceClimberControls(key) {
+        if (aceClimberGameOver) {
+            if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+                aceClimberSelectedOption = aceClimberSelectedOption === 0 ? 1 : 0;
+            } else if (key === "Enter" || key === " " || key === "a") {
+                if (aceClimberSelectedOption === 0) {
+                    initAceClimber(); // Retry
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            }
+            return;
+        }
+        
+        if (key === "ArrowLeft" || key === "a") {
+            aceClimberPlayer.x = Math.max(0, aceClimberPlayer.x - 5);
+        } else if (key === "ArrowRight" || key === "d") {
+            aceClimberPlayer.x = Math.min(150 - aceClimberPlayer.width, aceClimberPlayer.x + 5);
+        } else if (key === "ArrowUp" || key === "w") {
+            aceClimberPlayer.y = Math.max(0, aceClimberPlayer.y - 5);
+        } else if (key === "ArrowDown" || key === "s") {
+            aceClimberPlayer.y = Math.min(160 - aceClimberPlayer.height, aceClimberPlayer.y + 5);
+        }
+    }
+
+    // Render screen based on current state
+    function renderScreen() {
+        // Initialize the canvas if it doesn't exist
+        if (!canvas) {
+            initCanvas();
+        }
+
+        if (!isPoweredOn) {
+            // System off
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            return;
+        }
+
+        if (isShuttingDown) {
+            // Shutting down
+            ctx.fillStyle = "#000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            return;
+        }
+
+        if (!bootSequenceComplete) {
+            renderBootScreen();
+            return;
+        }
+
+        if (isPaused) {
+            renderPauseScreen();
+            return;
+        }
+
+        if (currentGame === "menu") {
+            renderMenuScreen();
+            return;
+        }
+
+        // For actual games, rendering is done in their respective game loops
+    }
+
+    // Render boot screen
+    function renderBootScreen() {
+        if (bootStage === 0) {
+            // Boot stage 0: Solid green
+            ctx.fillStyle = "#0f380f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        } else if (bootStage === 1) {
+            // Boot stage 1: Nintendo logo
+            ctx.fillStyle = "#9bbc0f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Greentendo text
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "8px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GREENTENDO®", canvas.width / 2, 40);
+
+            // Nintendo logo placeholder
+            ctx.strokeStyle = "#0f380f";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(canvas.width / 2 - 32, 50, 64, 24);
+        } else {
+            // Boot stage 2: Final screen
+            ctx.fillStyle = "#9bbc0f";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Greentendo text
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "8px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GREENTENDO®", canvas.width / 2, 60);
+
+            // Divider line
+            ctx.fillStyle = "#0f380f";
+            ctx.fillRect(canvas.width / 4, 70, canvas.width / 2, 2);
+
+            // Text
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "8px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("SAGANAKI22", canvas.width / 2, 85);
+        }
+    }
+
+    // Render pause screen
+    function renderPauseScreen() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("PAUSED", canvas.width / 2, 60);
+
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(selectedMenuItem === 0 ? "▶ Continue" : "  Continue", 40, 80);
+        ctx.fillText(selectedMenuItem === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 100);
+    }
+
+    // Render menu screen
+    function renderMenuScreen() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "16px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("GAME SELECT", 15, 30);
+
+        // Display page indicator
+        const totalPages = Math.ceil(menuItems.length / itemsPerPage);
+        if (totalPages > 1) {
+            ctx.font = "8px Arial";
+            ctx.textAlign = "right";
+            ctx.fillText(`${menuPage + 1}/${totalPages}`, canvas.width - 15, 45);
+        }
+
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        
+        // Calculate start and end indices for the current page
+        const startIdx = menuPage * itemsPerPage;
+        const endIdx = Math.min(startIdx + itemsPerPage, menuItems.length);
+        
+        // Display only the items for the current page
+        for (let i = startIdx; i < endIdx; i++) {
+            const game = menuItems[i];
+            const displayName = game
+                .split("-")
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(" ");
+            
+            const relativeIndex = i - startIdx; // Index relative to the current page
+            
+            ctx.fillText(
+                selectedMenuItem === i ? `▶ ${displayName}` : `  ${displayName}`, 
+                25, 
+                60 + relativeIndex * 20
+            );
+        }
+        
+        // Show page navigation hint if there are multiple pages
+        if (totalPages > 1) {
+            ctx.textAlign = "center";
+            
+            // If there's a next page, show down arrow
+            if (menuPage < totalPages - 1) {
+                ctx.fillText("▼", canvas.width / 2, canvas.height - 30);
+                ctx.fillText("DOWN for more", canvas.width / 2, canvas.height - 20);
+            }
+            
+            // If there's a previous page, show up arrow
+            if (menuPage > 0) {
+                ctx.fillText("▲", canvas.width / 2, 45);
+                ctx.fillText("UP for more", canvas.width / 2, 55);
+            }
+        }
+    }
+
+    // Start a game
+    function startGame(game) {
+        if (game === "snake") {
+            initSnake();
+        } else if (game === "pong") {
+            initPong();
+        } else if (game === "space-invaders") {
+            initSpaceInvaders();
+        } else if (game === "tetris") {
+            initTetris();
+        } else if (game === "breakout") {
+            initBreakout();
+        } else if (game === "golf") {
+            initGolf();
+        } else if (game === "aceclimber") {
+            initAceClimber();
+        }
+    }
+
+    // Start the game loop
+    function startGameLoop() {
+        if (gameLoopId) {
+            cancelAnimationFrame(gameLoopId);
+        }
+        
+        gameLoop();
+    }
+
+    // Main game loop
+    function gameLoop(timestamp) {
+        if (!isPoweredOn || isShuttingDown) {
+            cancelAnimationFrame(gameLoopId);
+            gameLoopId = null;
+            return;
+        }
+
+        // Check if in game over state to prevent updating game when in game over screen
+        const inGameOverScreen = (currentGame === "snake" && snakeGameOver) ||
+                               (currentGame === "pong" && pongGameOver) ||
+                               (currentGame === "space-invaders" && siGameOver) ||
+                               (currentGame === "tetris" && tetrisGameOver) ||
+                               (currentGame === "breakout" && breakoutGameOver) ||
+                               (currentGame === "golf" && golfGameOver) ||
+                               (currentGame === "aceclimber" && aceClimberGameOver);
+
+        if (currentGame === "snake" && !isPaused && !inGameOverScreen) {
+            updateSnake(timestamp);
+            renderSnake();
+        } else if (currentGame === "pong" && !isPaused && !inGameOverScreen) {
+            updatePong();
+            renderPong();
+        } else if (currentGame === "space-invaders" && !isPaused && !inGameOverScreen) {
+            updateSpaceInvaders(timestamp);
+            renderSpaceInvaders();
+        } else if (currentGame === "tetris" && !isPaused && !inGameOverScreen) {
+            updateTetris(timestamp);
+            renderTetris();
+        } else if (currentGame === "breakout" && !isPaused && !inGameOverScreen) {
+            updateBreakout(timestamp);
+            renderBreakout();
+        } else if (currentGame === "golf" && !isPaused && !inGameOverScreen) {
+            updateGolf(timestamp);
+            renderGolf();
+        } else if (currentGame === "aceclimber" && !isPaused && !inGameOverScreen) {
+            updateAceClimber(timestamp);
+            renderAceClimber();
+        } else if (isPaused && !inGameOverScreen) {
+            // Remove the incorrect key handling here - it's already handled in keydown event
+            // handlePausedControls(e.key); <- This line was causing errors
+            // Just render the pause screen instead
+            renderPauseScreen();
+        }
+
+        gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    ////////////////////
+    // SNAKE GAME
+    ////////////////////
+    let snake = [];
+    let food = { x: 0, y: 0 };
+    let snakeDirection = "right";
+    let snakeGameOver = false;
+    let snakeScore = 0;
+    let snakeLevel = 1;
+    let snakeSpeed = 150;
+    let lastSnakeUpdateTime = 0;
+
+    // Initialize Snake game
+    function initSnake() {
+        snake = [{ x: 7, y: 7 }];
+        snakeDirection = "right";
+        snakeGameOver = false;
+        snakeScore = 0;
+        snakeLevel = 1;
+        snakeSpeed = 150;
+        lastSnakeUpdateTime = 0;
+        snakeSelectedOption = 0;
+        snakeEndScreenListenerActive = false;
+        spawnSnakeFood();
+    }
+
+    // Spawn food in random location
+    function spawnSnakeFood() {
+        const x = Math.floor(Math.random() * 15);
+        const y = Math.floor(Math.random() * 15);
+
+        // Make sure food doesn't spawn on snake
+        if (snake.some(segment => segment.x === x && segment.y === y)) {
+            spawnSnakeFood();
+        } else {
+            food = { x, y };
+        }
+    }
+
+    // Update Snake game state
+    function updateSnake(timestamp) {
+        if (snakeGameOver) return;
+
+        // Throttle updates based on speed
+        if (timestamp - lastSnakeUpdateTime < snakeSpeed) return;
+        lastSnakeUpdateTime = timestamp;
+
+        // Move snake
+        const head = { ...snake[0] };
+
+        switch (snakeDirection) {
+            case "up":
+                head.y -= 1;
+                break;
+            case "down":
+                head.y += 1;
+                break;
+            case "left":
+                head.x -= 1;
+                break;
+            case "right":
+                head.x += 1;
+                break;
+        }
+
+        // Check if game over (wall collision)
+        if (head.x < 0 || head.x >= 15 || head.y < 0 || head.y >= 15) {
+            snakeGameOver = true;
+            return;
+        }
+
+        // Check if snake hits itself
+        if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+            snakeGameOver = true;
+            return;
+        }
+
+        // Add new head to snake
+        snake.unshift(head);
+
+        // Check if snake eats food
+        if (head.x === food.x && head.y === food.y) {
+            snakeScore += 10;
+            
+            // Play eating sound
+            playGameSound('snake-eat');
+
+            // Level up every 50 points
+            if (snakeScore % 50 === 0) {
+                snakeLevel += 1;
+                snakeSpeed = Math.max(50, snakeSpeed - 10);
+            }
+
+            spawnSnakeFood();
+        } else {
+            // Remove tail if no food eaten
+            snake.pop();
+        }
+    }
+
+    // Render Snake game
+    function renderSnake() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw grid (optional)
+        ctx.strokeStyle = "#8bac0f";
+        for (let i = 0; i < 15; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * 10, 0);
+            ctx.lineTo(i * 10, 150);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, i * 10);
+            ctx.lineTo(150, i * 10);
+            ctx.stroke();
+        }
+
+        // Draw snake
+        ctx.fillStyle = "#0f380f";
+        snake.forEach(segment => {
+            ctx.fillRect(segment.x * 10, segment.y * 10, 10, 10);
+        });
+
+        // Draw food
+        ctx.fillStyle = "#0f380f";
+        ctx.fillRect(food.x * 10, food.y * 10, 10, 10);
+
+        // Draw score and level
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`SCORE: ${snakeScore}`, 5, 10);
+        ctx.textAlign = "right";
+        ctx.fillText(`LEVEL: ${snakeLevel}`, 145, 10);
+
+        // Draw game over
+        if (snakeGameOver) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            ctx.fillText(`FINAL SCORE: ${snakeScore}`, canvas.width / 2, 80);
+            
+            // Add retry option
+            ctx.textAlign = "left";
+            ctx.fillText(snakeSelectedOption === 0 ? "▶ Retry" : "  Retry", 40, 100);
+            ctx.fillText(snakeSelectedOption === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 112);
+        }
+    }
+
+    ////////////////////
+    // PONG GAME
+    ////////////////////
+    let playerPaddle = { x: 0, y: 0, width: 0, height: 0 };
+    let aiPaddle = { x: 0, y: 0, width: 0, height: 0 };
+    let ball = { x: 0, y: 0, radius: 0, dx: 0, dy: 0 };
+    let playerScore = 0;
+    let aiScore = 0;
+    let pongGameOver = false;
+    let pongLevel = 1;
+
+    // Initialize Pong game
+    function initPong() {
+        playerPaddle = {
+            x: 70,
+            y: 140,
+            width: 30,
+            height: 5
+        };
+        aiPaddle = {
+            x: 70,
+            y: 15,
+            width: 30,
+            height: 5
+        };
+        resetBall();
+        playerScore = 0;
+        aiScore = 0;
+        pongGameOver = false;
+        pongLevel = 1;
+        pongSelectedOption = 0;
+        pongEndScreenListenerActive = false;
+    }
+
+    // Reset ball position
+    function resetBall() {
+        // Using 0.25x the original speed (0.5 instead of 2)
+        ball = {
+            x: 75,
+            y: 75,
+            radius: 3,
+            dx: Math.random() > 0.5 ? 0.5 : -0.5,
+            dy: Math.random() > 0.5 ? 0.5 : -0.5
+        };
+    }
+
+    // Update Pong game state
+    function updatePong() {
+        if (pongGameOver) return;
+
+        // Move ball
+        ball.x += ball.dx;
+        ball.y += ball.dy;
+
+        // Ball collision with walls
+        if (ball.x - ball.radius <= 0 || ball.x + ball.radius >= 150) {
+            ball.dx = -ball.dx;
+        }
+
+        // Ball collision with paddles
+        if (
+            ball.y - ball.radius <= aiPaddle.y + aiPaddle.height &&
+            ball.x + ball.radius >= aiPaddle.x &&
+            ball.x - ball.radius <= aiPaddle.x + aiPaddle.width &&
+            ball.dy < 0
+        ) {
+            ball.dy = -ball.dy;
+            // Play paddle hit sound
+            playGameSound('pong-paddle');
+        }
+
+        if (
+            ball.y + ball.radius >= playerPaddle.y &&
+            ball.x + ball.radius >= playerPaddle.x &&
+            ball.x - ball.radius <= playerPaddle.x + playerPaddle.width &&
+            ball.dy > 0
+        ) {
+            ball.dy = -ball.dy;
+            // Play paddle hit sound
+            playGameSound('pong-paddle');
+        }
+
+        // Ball out of bounds
+        if (ball.y < 0) {
+            // Player scores
+            playerScore++;
+
+            // Level up every 3 points
+            if (playerScore % 3 === 0) {
+                pongLevel++;
+            }
+
+            resetBall();
+        }
+
+        if (ball.y > 160) {
+            // AI scores
+            aiScore++;
+
+            // Game over if AI reaches 5 points
+            if (aiScore >= 5) {
+                pongGameOver = true;
+            }
+
+            resetBall();
+        }
+
+        // Move AI paddle with increasing difficulty based on level
+        const aiSpeed = 1 + pongLevel * 0.5;
+        // Calculate where the paddle should go to hit the ball
+        const aiTargetX = ball.x - aiPaddle.width / 2;
+        
+        // Add some randomness to make it beatable
+        let randomOffset = Math.random() * 10 - 5;
+        
+        // Make the CPU go to the opposite side of the ball 65% of the time (instead of level 1 behavior)
+        if (ball.dy < 0 && ball.y < 80) {
+            // Only apply when ball is moving toward AI and in top half of screen
+            if (Math.random() < 0.65) {
+                // Deliberately move away from the ball
+                randomOffset = (ball.x < 75) ? 40 : -40; // Stronger move in opposite direction
+            }
+        }
+        
+        const aiNewX = aiPaddle.x + (aiTargetX + randomOffset - aiPaddle.x) * (aiSpeed / 10);
+
+        aiPaddle.x = Math.max(0, Math.min(150 - aiPaddle.width, aiNewX));
+    }
+
+    // Render Pong game
+    function renderPong() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (pongGameOver) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            ctx.fillText(`FINAL SCORE: ${playerScore}-${aiScore}`, canvas.width / 2, 80);
+            
+            // Add retry option
+            ctx.textAlign = "left";
+            ctx.fillText(pongSelectedOption === 0 ? "▶ Retry" : "  Retry", 40, 100);
+            ctx.fillText(pongSelectedOption === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 112);
+            return;
+        }
+
+        // Draw center line
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.moveTo(0, 80);
+        ctx.lineTo(150, 80);
+        ctx.strokeStyle = "#0f380f";
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Draw paddles
+        ctx.fillStyle = "#0f380f";
+        ctx.fillRect(playerPaddle.x, playerPaddle.y, playerPaddle.width, playerPaddle.height);
+        ctx.fillRect(aiPaddle.x, aiPaddle.y, aiPaddle.width, aiPaddle.height);
+
+        // Draw ball
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#0f380f";
+        ctx.fill();
+        ctx.closePath();
+
+        // Draw score and level
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`YOU: ${playerScore}`, 5, 90);
+        ctx.fillText(`CPU: ${aiScore}`, 5, 70);
+        ctx.textAlign = "right";
+        ctx.fillText(`LEVEL: ${pongLevel}`, 145, 80);
+    }
+
+    ////////////////////
+    // SPACE INVADERS GAME
+    ////////////////////
+    let siPlayer = {};
+    let siBullets = [];
+    let siAliens = [];
+    let siAlienDirection = 1;
+    let siAlienBullets = [];
+    let siScore = 0;
+    let siLevel = 1;
+    let siGameOver = false;
+    let siShowEndScreen = false;
+    let siSelectedEndOption = 0;
+    let siLastUpdateTime = 0;
+    const siUpdateInterval = 1000 / 30; // 30 FPS
+
+    // Initialize Space Invaders game
+    function initSpaceInvaders() {
+        siPlayer = {
+            x: 75,
+            y: 140,
+            width: 10,
+            height: 8
+        };
+        siBullets = [];
+        siAlienBullets = [];
+        siAlienDirection = 1;
+        siScore = 0;
+        siLevel = 1;
+        siGameOver = false;
+        siShowEndScreen = false;
+        siSelectedEndOption = 0;
+        
+        // Create aliens
+        siAliens = [];
+        const rows = 3;
+        const cols = 8;
+        const alienWidth = 10;
+        const alienHeight = 8;
+        const padding = 5;
+
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                siAliens.push({
+                    x: col * (alienWidth + padding) + 15,
+                    y: row * (alienHeight + padding) + 20,
+                    width: alienWidth,
+                    height: alienHeight,
+                    alive: true
+                });
+            }
+        }
+    }
+
+    // Check collision between two entities
+    function checkCollision(a, b) {
+        return a.x < b.x + b.width && 
+               a.x + a.width > b.x && 
+               a.y < b.y + b.height && 
+               a.y + a.height > b.y;
+    }
+
+    // Update Space Invaders game state
+    function updateSpaceInvaders(timestamp) {
+        if (siGameOver) {
+            if (!siShowEndScreen) {
+                setTimeout(() => {
+                    siShowEndScreen = true;
+                }, 2000);
+            }
+            return;
+        }
+
+        if (timestamp - siLastUpdateTime < siUpdateInterval) return;
+        siLastUpdateTime = timestamp;
+
+        // Move bullets
+        siBullets = siBullets
+            .map(bullet => ({
+                ...bullet,
+                y: bullet.y - 3
+            }))
+            .filter(bullet => bullet.y > 0);
+
+        // Move alien bullets
+        siAlienBullets = siAlienBullets
+            .map(bullet => ({
+                ...bullet,
+                y: bullet.y + 2
+            }))
+            .filter(bullet => bullet.y < 160);
+
+        // Move aliens
+        let shouldChangeDirection = false;
+        let allDead = true;
+
+        siAliens = siAliens.map(alien => {
+            if (!alien.alive) return alien;
+
+            allDead = false;
+            const newX = alien.x + siAlienDirection * (0.5 + siLevel * 0.2);
+
+            if (newX <= 0 || newX + alien.width >= 150) {
+                shouldChangeDirection = true;
+            }
+
+            return {
+                ...alien,
+                x: newX
+            };
+        });
+
+        if (shouldChangeDirection) {
+            siAlienDirection = -siAlienDirection;
+            
+            siAliens = siAliens.map(alien => ({
+                ...alien,
+                y: alien.y + 5
+            }));
+        }
+
+        // Check if all aliens are dead
+        if (allDead) {
+            siLevel++;
+            
+            // Create new aliens for next level
+            siAliens = [];
+            const rows = 3;
+            const cols = 8;
+            const alienWidth = 10;
+            const alienHeight = 8;
+            const padding = 5;
+
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    siAliens.push({
+                        x: col * (alienWidth + padding) + 15,
+                        y: row * (alienHeight + padding) + 20,
+                        width: alienWidth,
+                        height: alienHeight,
+                        alive: true
+                    });
+                }
+            }
+            
+            siAlienBullets = [];
+            return;
+        }
+
+        // Random alien shooting
+        if (Math.random() < 0.02 + siLevel * 0.01) {
+            const livingAliens = siAliens.filter(alien => alien.alive);
+            if (livingAliens.length > 0) {
+                const shooter = livingAliens[Math.floor(Math.random() * livingAliens.length)];
+                siAlienBullets.push({
+                    x: shooter.x + shooter.width / 2 - 1,
+                    y: shooter.y + shooter.height,
+                    width: 2,
+                    height: 5
+                });
+            }
+        }
+
+        // Check collisions
+        // Bullets hitting aliens
+        for (let bi = siBullets.length - 1; bi >= 0; bi--) {
+            const bullet = siBullets[bi];
+            
+            for (let ai = 0; ai < siAliens.length; ai++) {
+                const alien = siAliens[ai];
+                
+                if (alien.alive && checkCollision(bullet, alien)) {
+                    siAliens[ai].alive = false;
+                    siBullets.splice(bi, 1);
+                    siScore += 10;
+                    break;
+                }
+            }
+        }
+
+        // Alien bullets hitting player
+        for (let i = 0; i < siAlienBullets.length; i++) {
+            if (checkCollision(siAlienBullets[i], siPlayer)) {
+                siGameOver = true;
+                break;
+            }
+        }
+
+        // Aliens reaching bottom
+        for (let i = 0; i < siAliens.length; i++) {
+            const alien = siAliens[i];
+            if (alien.alive && alien.y + alien.height >= siPlayer.y) {
+                siGameOver = true;
+                break;
+            }
+        }
+    }
+
+    // Render Space Invaders game
+    function renderSpaceInvaders() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (siShowEndScreen) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            ctx.fillText(`FINAL SCORE: ${siScore}`, canvas.width / 2, 80);
+
+            const options = ["Restart Game", "Back to Menu"];
+            options.forEach((option, index) => {
+                ctx.fillStyle = "#0f380f";
+                ctx.font = "8px Arial";
+                ctx.textAlign = "left";
+                ctx.fillText(
+                    siSelectedEndOption === index ? `▶ ${option}` : `  ${option}`, 
+                    40, 
+                    100 + index * 12
+                );
+            });
+            
+            return;
+        }
+
+        // Draw player
+        ctx.fillStyle = "#0f380f";
+        ctx.fillRect(siPlayer.x, siPlayer.y, siPlayer.width, siPlayer.height);
+
+        // Draw bullets
+        ctx.fillStyle = "#0f380f";
+        siBullets.forEach(bullet => {
+            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        });
+
+        // Draw aliens
+        siAliens.forEach(alien => {
+            if (alien.alive) {
+                ctx.fillStyle = "#0f380f";
+                ctx.fillRect(alien.x, alien.y, alien.width, alien.height);
+            }
+        });
+
+        // Draw alien bullets
+        ctx.fillStyle = "#0f380f";
+        siAlienBullets.forEach(bullet => {
+            ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+        });
+
+        // Draw score and level
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`SCORE: ${siScore}`, 5, 10);
+        ctx.textAlign = "right";
+        ctx.fillText(`LEVEL: ${siLevel}`, 145, 10);
+
+        // Draw game over
+        if (siGameOver && !siShowEndScreen) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 75);
+        }
+    }
+
+    ////////////////////
+    // TETRIS GAME
+    ////////////////////
+    let tetrisGrid = [];
+    let tetrisCurrentBlock = null;
+    let tetrisNextBlock = null;
+    let tetrisGameOver = false;
+    let tetrisScore = 0;
+    let tetrisLevel = 1;
+    let tetrisLines = 0;
+    let tetrisDropInterval = 1000; // Initial drop interval in ms
+    let tetrisLastDropTime = 0;
+    let tetrisSelectedOption = 0;
+
+    // Add Tetris music variables (disabled)
+    let tetrisMusicEnabled = false;
+    let tetrisMusicPlaying = false;
+    let tetrisAudioContext = null;
+    let tetrisCurrentNote = 0;
+    let tetrisNextNoteTime = 0;
+    let tetrisTimeoutId = null;
+
+    // Define the notes and durations for the Tetris melody (Korobeiniki folk tune)
+    const tetrisMelody = [
+        // First phrase
+        { note: 'E5', duration: 0.25 },
+        { note: 'B4', duration: 0.125 },
+        { note: 'C5', duration: 0.125 },
+        { note: 'D5', duration: 0.25 },
+        { note: 'C5', duration: 0.125 },
+        { note: 'B4', duration: 0.125 },
+        
+        // Second phrase
+        { note: 'A4', duration: 0.25 },
+        { note: 'A4', duration: 0.125 },
+        { note: 'C5', duration: 0.125 },
+        { note: 'E5', duration: 0.25 },
+        { note: 'D5', duration: 0.125 },
+        { note: 'C5', duration: 0.125 },
+        
+        // Third phrase
+        { note: 'B4', duration: 0.375 },
+        { note: 'C5', duration: 0.125 },
+        { note: 'D5', duration: 0.25 },
+        { note: 'E5', duration: 0.25 },
+        
+        // Fourth phrase
+        { note: 'C5', duration: 0.25 },
+        { note: 'A4', duration: 0.25 },
+        { note: 'A4', duration: 0.25 },
+        { note: 'REST', duration: 0.25 },
+        
+        // Fifth phrase (repeat of first)
+        { note: 'D5', duration: 0.25 },
+        { note: 'F5', duration: 0.125 },
+        { note: 'A5', duration: 0.25 },
+        { note: 'G5', duration: 0.125 },
+        { note: 'F5', duration: 0.125 },
+        
+        // Sixth phrase
+        { note: 'E5', duration: 0.375 },
+        { note: 'C5', duration: 0.125 },
+        { note: 'E5', duration: 0.25 },
+        { note: 'D5', duration: 0.125 },
+        { note: 'C5', duration: 0.125 },
+        
+        // Seventh phrase
+        { note: 'B4', duration: 0.25 },
+        { note: 'B4', duration: 0.125 },
+        { note: 'C5', duration: 0.125 },
+        { note: 'D5', duration: 0.25 },
+        { note: 'E5', duration: 0.25 },
+        
+        // Eighth phrase
+        { note: 'C5', duration: 0.25 },
+        { note: 'A4', duration: 0.25 },
+        { note: 'A4', duration: 0.25 },
+        { note: 'REST', duration: 0.25 }
+    ];
+
+    // Map note names to frequencies
+    const noteToFrequency = {
+        'REST': 0,
+        'A4': 440.0,
+        'B4': 493.88,
+        'C5': 523.25,
+        'D5': 587.33,
+        'E5': 659.25,
+        'F5': 698.46,
+        'G5': 783.99,
+        'A5': 880.0
+    };
+
+    // Tetris block shapes
+    const tetrisShapes = [
+        // I block
+        [
+            [0, 0, 0, 0],
+            [1, 1, 1, 1],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0]
+        ],
+        // J block
+        [
+            [1, 0, 0],
+            [1, 1, 1],
+            [0, 0, 0]
+        ],
+        // L block
+        [
+            [0, 0, 1],
+            [1, 1, 1],
+            [0, 0, 0]
+        ],
+        // O block
+        [
+            [1, 1],
+            [1, 1]
+        ],
+        // S block
+        [
+            [0, 1, 1],
+            [1, 1, 0],
+            [0, 0, 0]
+        ],
+        // T block
+        [
+            [0, 1, 0],
+            [1, 1, 1],
+            [0, 0, 0]
+        ],
+        // Z block
+        [
+            [1, 1, 0],
+            [0, 1, 1],
+            [0, 0, 0]
+        ]
+    ];
+
+    // Initialize Tetris game
+    function initTetris() {
+        // Initialize tetris grid and variables
+        tetrisGrid = Array(18).fill().map(() => Array(10).fill(0));
+        tetrisCurrentBlock = getRandomTetrisBlock();
+        tetrisNextBlock = getRandomTetrisBlock();
+        tetrisGameOver = false;
+        tetrisScore = 0;
+        tetrisLevel = 1;
+        tetrisLines = 0;
+        tetrisDropInterval = 1000;
+        tetrisLastDropTime = 0;
+        tetrisSelectedOption = 0;
+        
+        // Don't start music
+        // startTetrisMusic();  <- removed
+    }
+
+    // Get a random Tetris block
+    function getRandomTetrisBlock() {
+        const shapeIndex = Math.floor(Math.random() * tetrisShapes.length);
+        const shape = tetrisShapes[shapeIndex];
+        
+        return {
+            shape: shape,
+            x: Math.floor((10 - shape[0].length) / 2),
+            y: 0
+        };
+    }
+
+    // Check if a block position is valid
+    function isValidTetrisPosition(block, offsetX, offsetY) {
+        for (let y = 0; y < block.shape.length; y++) {
+            for (let x = 0; x < block.shape[y].length; x++) {
+                if (block.shape[y][x]) {
+                    const newX = block.x + x + offsetX;
+                    const newY = block.y + y + offsetY;
+                    
+                    // Check boundaries
+                    if (newX < 0 || newX >= 10 || newY >= 18) {
+                        return false;
+                    }
+                    
+                    // Check collision with placed blocks
+                    if (newY >= 0 && tetrisGrid[newY][newX]) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    // Move block horizontally
+    function moveTetrisBlockHorizontal(direction) {
+        if (!tetrisCurrentBlock || tetrisGameOver) return;
+        
+        if (isValidTetrisPosition(tetrisCurrentBlock, direction, 0)) {
+            tetrisCurrentBlock.x += direction;
+        }
+    }
+
+    // Move block down
+    function moveTetrisBlockDown() {
+        if (!tetrisCurrentBlock || tetrisGameOver) return;
+        
+        if (isValidTetrisPosition(tetrisCurrentBlock, 0, 1)) {
+            tetrisCurrentBlock.y++;
+            return true;
+        } else {
+            placeTetrisBlock();
+            return false;
+        }
+    }
+
+    // Rotate Tetris block
+    function rotateTetrisBlock() {
+        if (!tetrisCurrentBlock || tetrisGameOver) return;
+        
+        const originalShape = tetrisCurrentBlock.shape;
+        const newShape = [];
+        
+        // Create rotated shape (90 degrees clockwise)
+        for (let y = 0; y < originalShape[0].length; y++) {
+            newShape[y] = [];
+            for (let x = 0; x < originalShape.length; x++) {
+                newShape[y][x] = originalShape[originalShape.length - 1 - x][y];
+            }
+        }
+        
+        // Create temporary block with rotated shape
+        const rotatedBlock = {
+            shape: newShape,
+            x: tetrisCurrentBlock.x,
+            y: tetrisCurrentBlock.y
+        };
+        
+        // Check if the new position is valid
+        if (isValidTetrisPosition(rotatedBlock, 0, 0)) {
+            tetrisCurrentBlock.shape = newShape;
+        }
+    }
+
+    // Place the current block on the grid
+    function placeTetrisBlock() {
+        for (let y = 0; y < tetrisCurrentBlock.shape.length; y++) {
+            for (let x = 0; x < tetrisCurrentBlock.shape[y].length; x++) {
+                if (tetrisCurrentBlock.shape[y][x]) {
+                    const gridY = tetrisCurrentBlock.y + y;
+                    const gridX = tetrisCurrentBlock.x + x;
+                    
+                    // If block is placed outside the visible grid, game over
+                    if (gridY < 0) {
+                        tetrisGameOver = true;
+                        return;
+                    }
+                    
+                    tetrisGrid[gridY][gridX] = 1;
+                }
+            }
+        }
+        
+        // Play block placement sound
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Block placement "thud" sound
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(180, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            
+            // Quick decay for the thud effect
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+            
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 150);
+        } catch (e) {
+            console.error("Could not create block placement sound:", e);
+        }
+        
+        // Check for completed lines
+        clearTetrisLines();
+        
+        // Get next block
+        tetrisCurrentBlock = tetrisNextBlock;
+        tetrisNextBlock = getRandomTetrisBlock();
+        
+        // Check if new block can be placed
+        if (!isValidTetrisPosition(tetrisCurrentBlock, 0, 0)) {
+            tetrisGameOver = true;
+        }
+    }
+
+    // Clear completed lines
+    function clearTetrisLines() {
+        let linesCleared = 0;
+        
+        for (let y = 0; y < tetrisGrid.length; y++) {
+            let lineComplete = true;
+            
+            for (let x = 0; x < tetrisGrid[y].length; x++) {
+                if (!tetrisGrid[y][x]) {
+                    lineComplete = false;
+                    break;
+                }
+            }
+            
+            if (lineComplete) {
+                // Remove the line and add an empty one at the top
+                tetrisGrid.splice(y, 1);
+                tetrisGrid.unshift(Array(10).fill(0));
+                linesCleared++;
+            }
+        }
+        
+        if (linesCleared > 0) {
+            // Play line clear sound - slightly different sound based on number of lines
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                const audioCtx = new AudioContext();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                // Play different sound based on number of lines cleared
+                if (linesCleared >= 4) {
+                    // Tetris! (4 lines) - special sound
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(440, audioCtx.currentTime); // A4
+                    gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                    }, 100);
+                    
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+                    }, 200);
+                    
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+                    }, 300);
+                    
+                    setTimeout(() => oscillator.stop(), 500);
+                } else {
+                    // Regular line clear sound
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(400 + (linesCleared * 100), audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(600 + (linesCleared * 100), audioCtx.currentTime);
+                    }, 100);
+                    
+                    setTimeout(() => oscillator.stop(), 250);
+                }
+                
+                oscillator.start();
+            } catch (e) {
+                console.error("Could not create line clear sound:", e);
+            }
+            
+            // Update score based on lines cleared
+            // Classic Tetris scoring: 40, 100, 300, 1200 for 1-4 lines
+            const scoreMultipliers = [0, 40, 100, 300, 1200];
+            tetrisScore += scoreMultipliers[linesCleared] * tetrisLevel;
+            
+            // Update lines and level
+            tetrisLines += linesCleared;
+            const newLevel = Math.floor(tetrisLines / 10) + 1;
+            
+            // Level up if needed
+            if (newLevel > tetrisLevel) {
+                tetrisLevel = newLevel;
+                tetrisDropInterval = Math.max(100, 1000 - (tetrisLevel - 1) * 100);
+            }
+        }
+    }
+
+    // Handle Tetris controls
+    function handleTetrisControls(key) {
+        if (tetrisGameOver) {
+            if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+                tetrisSelectedOption = tetrisSelectedOption === 0 ? 1 : 0;
+                renderTetris();
+            } else if (key === "Enter" || key === " " || key === "a") {
+                if (tetrisSelectedOption === 0) {
+                    initTetris(); // Retry
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            }
+            return;
+        }
+        
+        if (key === "ArrowLeft" || key === "a") {
+            moveTetrisBlockHorizontal(-1);
+        } else if (key === "ArrowRight" || key === "d") {
+            moveTetrisBlockHorizontal(1);
+        } else if (key === "ArrowDown" || key === "s") {
+            moveTetrisBlockDown();
+        } else if (key === "ArrowUp" || key === "w") {
+            rotateTetrisBlock();
+        } else if (key === " ") {
+            // Space is also used to rotate blocks
+            rotateTetrisBlock();
+        }
+    }
+
+    // Update Tetris game state
+    function updateTetris(timestamp) {
+        if (tetrisGameOver) {
+            stopTetrisMusic();
+            return;
+        }
+        
+        // Automatic block drop based on interval
+        if (timestamp - tetrisLastDropTime > tetrisDropInterval) {
+            moveTetrisBlockDown();
+            tetrisLastDropTime = timestamp;
+        }
+    }
+
+    // Start the Tetris music (disabled)
+    function startTetrisMusic() {
+        // Music disabled - function does nothing
+        return;
+    }
+
+    // Stop the Tetris music (disabled)
+    function stopTetrisMusic() {
+        // Music disabled - function does nothing
+        return;
+    }
+
+    // Schedule the next note in the melody (disabled)
+    function scheduleNextTetrisNote() {
+        // Music disabled - function does nothing
+        return;
+    }
+
+    // Play a single note (disabled)
+    function playTetrisNote(frequency, duration) {
+        // Music disabled - function does nothing
+        return;
+    }
+
+    // Render Tetris game
+    function renderTetris() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Calculate cell size based on grid dimensions
+        const cellSize = 8;
+        const gridWidth = 10 * cellSize;
+        const gridHeight = 18 * cellSize;
+        const gridX = (150 - gridWidth) / 2;
+        const gridY = 5;
+        
+        if (tetrisGameOver) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            ctx.fillText(`SCORE: ${tetrisScore}`, canvas.width / 2, 75);
+            ctx.fillText(`LEVEL: ${tetrisLevel}`, canvas.width / 2, 85);
+            
+            // Retry options
+            ctx.textAlign = "left";
+            ctx.fillText(tetrisSelectedOption === 0 ? "▶ Retry" : "  Retry", 40, 105);
+            ctx.fillText(tetrisSelectedOption === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 120);
+            return;
+        }
+        
+        // Draw grid background
+        ctx.fillStyle = "#8bac0f";
+        ctx.fillRect(gridX, gridY, gridWidth, gridHeight);
+        
+        // Draw grid cells
+        for (let y = 0; y < tetrisGrid.length; y++) {
+            for (let x = 0; x < tetrisGrid[y].length; x++) {
+                if (tetrisGrid[y][x]) {
+                    ctx.fillStyle = "#0f380f";
+                    ctx.fillRect(gridX + x * cellSize, gridY + y * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        
+        // Draw current block
+        if (tetrisCurrentBlock) {
+            ctx.fillStyle = "#0f380f";
+            for (let y = 0; y < tetrisCurrentBlock.shape.length; y++) {
+                for (let x = 0; x < tetrisCurrentBlock.shape[y].length; x++) {
+                    if (tetrisCurrentBlock.shape[y][x]) {
+                        const blockX = gridX + (tetrisCurrentBlock.x + x) * cellSize;
+                        const blockY = gridY + (tetrisCurrentBlock.y + y) * cellSize;
+                        ctx.fillRect(blockX, blockY, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+        
+        // Draw next block preview
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText("NEXT:", 5, 10);
+        
+        const previewX = 5;
+        const previewY = 15;
+        const previewSize = 6; // Smaller cells for preview
+        
+        if (tetrisNextBlock) {
+            for (let y = 0; y < tetrisNextBlock.shape.length; y++) {
+                for (let x = 0; x < tetrisNextBlock.shape[y].length; x++) {
+                    if (tetrisNextBlock.shape[y][x]) {
+                        ctx.fillRect(previewX + x * previewSize, previewY + y * previewSize, previewSize, previewSize);
+                    }
+                }
+            }
+        }
+        
+        // Draw score and level
+        ctx.textAlign = "right";
+        ctx.fillText(`SCORE: ${tetrisScore}`, 145, 15);
+        ctx.fillText(`LEVEL: ${tetrisLevel}`, 145, 25);
+    }
+
+    ////////////////////
+    // BREAKOUT GAME
+    ////////////////////
+    let breakoutPaddle = {};
+    let breakoutBall = {};
+    let breakoutBlocks = [];
+    let breakoutScore = 0;
+    let breakoutLevel = 1;
+    let breakoutLives = 3;
+    let breakoutGameOver = false;
+    let breakoutSelectedOption = 0;
+    let breakoutBallMoving = false;
+
+    // Initialize Breakout game
+    function initBreakout() {
+        breakoutPaddle = {
+            x: 60,
+            y: 140,
+            width: 30,
+            height: 5
+        };
+        
+        breakoutBall = {
+            x: 75,
+            y: 130,
+            radius: 3,
+            dx: 0,
+            dy: 0
+        };
+        
+        breakoutBallMoving = false;
+        breakoutBlocks = [];
+        breakoutScore = 0;
+        breakoutLevel = 1;
+        breakoutLives = 3;
+        breakoutGameOver = false;
+        breakoutSelectedOption = 0;
+        
+        // Create blocks
+        createBreakoutBlocks();
+    }
+
+    // Create blocks for the current level
+    function createBreakoutBlocks() {
+        breakoutBlocks = [];
+        
+        const rows = 4 + Math.min(2, breakoutLevel - 1);
+        const cols = 8;
+        const blockWidth = 16;
+        const blockHeight = 8;
+        const padding = 2;
+        const offsetX = 8;
+        const offsetY = 20;
+        
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                breakoutBlocks.push({
+                    x: col * (blockWidth + padding) + offsetX,
+                    y: row * (blockHeight + padding) + offsetY,
+                    width: blockWidth,
+                    height: blockHeight,
+                    visible: true
+                });
+            }
+        }
+    }
+
+    // Launch the ball
+    function launchBreakoutBall() {
+        if (breakoutBallMoving) return;
+        
+        breakoutBallMoving = true;
+        
+        // Set initial velocity
+        const angle = Math.random() * Math.PI / 4 + Math.PI / 4; // Between 45 and 90 degrees
+        
+        // Base speed that adjusts according to level
+        let speedMultiplier = 1.0;
+        
+        // Half speed until level 3
+        if (breakoutLevel < 3) {
+            speedMultiplier = 0.75;
+        } else {
+            // Increase speed by 0.25x per level starting from level 3
+            speedMultiplier = 0.75 + ((breakoutLevel - 2) * 0.25);
+        }
+        
+        breakoutBall.dx = speedMultiplier * 1.5 * Math.cos(angle) * (Math.random() > 0.5 ? 1 : -1);
+        breakoutBall.dy = speedMultiplier * -1.5 * Math.sin(angle);
+    }
+
+    // Reset the ball after losing a life
+    function resetBreakoutBall() {
+        breakoutBall.x = breakoutPaddle.x + breakoutPaddle.width / 2;
+        breakoutBall.y = breakoutPaddle.y - breakoutBall.radius;
+        breakoutBall.dx = 0;
+        breakoutBall.dy = 0;
+        breakoutBallMoving = false;
+    }
+
+    // Check if all blocks are cleared
+    function allBreakoutBlocksCleared() {
+        return breakoutBlocks.every(block => !block.visible);
+    }
+
+    // Update Breakout game state
+    function updateBreakout(timestamp) {
+        if (breakoutGameOver) return;
+        
+        if (!breakoutBallMoving) {
+            // Ball follows paddle when not launched
+            breakoutBall.x = breakoutPaddle.x + breakoutPaddle.width / 2;
+            breakoutBall.y = breakoutPaddle.y - breakoutBall.radius;
+            return;
+        }
+        
+        // Move ball
+        breakoutBall.x += breakoutBall.dx;
+        breakoutBall.y += breakoutBall.dy;
+        
+        // Ball collision with walls
+        if (breakoutBall.x - breakoutBall.radius <= 0 || breakoutBall.x + breakoutBall.radius >= 150) {
+            breakoutBall.dx = -breakoutBall.dx;
+        }
+        
+        if (breakoutBall.y - breakoutBall.radius <= 0) {
+            breakoutBall.dy = -breakoutBall.dy;
+        }
+        
+        // Ball out of bounds (bottom)
+        if (breakoutBall.y + breakoutBall.radius >= 160) {
+            breakoutLives--;
+            
+            if (breakoutLives <= 0) {
+                breakoutGameOver = true;
+            } else {
+                resetBreakoutBall();
+            }
+            
+            return;
+        }
+        
+        // Ball collision with paddle
+        if (
+            breakoutBall.y + breakoutBall.radius >= breakoutPaddle.y &&
+            breakoutBall.y - breakoutBall.radius <= breakoutPaddle.y + breakoutPaddle.height &&
+            breakoutBall.x >= breakoutPaddle.x &&
+            breakoutBall.x <= breakoutPaddle.x + breakoutPaddle.width
+        ) {
+            // Change angle based on where ball hits the paddle
+            const hitPosition = (breakoutBall.x - breakoutPaddle.x) / breakoutPaddle.width;
+            const angle = (hitPosition * Math.PI / 2) + Math.PI / 4; // Between 45 and 135 degrees
+            
+            const speed = Math.sqrt(breakoutBall.dx * breakoutBall.dx + breakoutBall.dy * breakoutBall.dy);
+            breakoutBall.dx = speed * Math.cos(angle) * (hitPosition < 0.5 ? -1 : 1);
+            breakoutBall.dy = -speed * Math.sin(angle);
+            
+            // Add minimum vertical velocity to prevent horizontal locking
+            if (Math.abs(breakoutBall.dy) < 0.5) {
+                breakoutBall.dy = -0.5;
+            }
+            
+            // Play sound
+            playGameSound('pong-paddle');
+        }
+        
+        // Ball collision with blocks
+        for (let i = 0; i < breakoutBlocks.length; i++) {
+            const block = breakoutBlocks[i];
+            
+            if (!block.visible) continue;
+            
+            if (
+                breakoutBall.x + breakoutBall.radius >= block.x &&
+                breakoutBall.x - breakoutBall.radius <= block.x + block.width &&
+                breakoutBall.y + breakoutBall.radius >= block.y &&
+                breakoutBall.y - breakoutBall.radius <= block.y + block.height
+            ) {
+                block.visible = false;
+                breakoutScore += 10;
+                
+                // Determine bounce direction based on which side of the block was hit
+                const ballBottom = breakoutBall.y + breakoutBall.radius;
+                const ballTop = breakoutBall.y - breakoutBall.radius;
+                const ballRight = breakoutBall.x + breakoutBall.radius;
+                const ballLeft = breakoutBall.x - breakoutBall.radius;
+                
+                const blockBottom = block.y + block.height;
+                const blockTop = block.y;
+                const blockRight = block.x + block.width;
+                const blockLeft = block.x;
+                
+                // Calculate penetration depths
+                const bottomPenetration = ballBottom - blockTop;
+                const topPenetration = blockBottom - ballTop;
+                const rightPenetration = ballRight - blockLeft;
+                const leftPenetration = blockRight - ballLeft;
+                
+                // Find minimum penetration to determine bounce direction
+                const minPenetration = Math.min(bottomPenetration, topPenetration, rightPenetration, leftPenetration);
+                
+                if (minPenetration === bottomPenetration || minPenetration === topPenetration) {
+                    breakoutBall.dy = -breakoutBall.dy;
+                } else {
+                    breakoutBall.dx = -breakoutBall.dx;
+                }
+                
+                // Play sound - more satisfying sound for breaking blocks
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    const audioCtx = new AudioContext();
+                    const oscillator = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioCtx.destination);
+                    
+                    // Breaking brick sound
+                    oscillator.type = 'square';
+                    oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+                    gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    
+                    setTimeout(() => {
+                        oscillator.frequency.setValueAtTime(450, audioCtx.currentTime);
+                    }, 50);
+                    
+                    oscillator.start();
+                    setTimeout(() => oscillator.stop(), 100);
+                } catch (e) {
+                    console.error("Could not create brick break sound:", e);
+                }
+                
+                // Check if all blocks are cleared
+                if (allBreakoutBlocksCleared()) {
+                    breakoutLevel++;
+                    createBreakoutBlocks();
+                    resetBreakoutBall();
+                    return;
+                }
+                
+                break;
+            }
+        }
+    }
+
+    // Render Breakout game
+    function renderBreakout() {
+        ctx.fillStyle = "#9bbc0f";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (breakoutGameOver) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            ctx.fillText(`FINAL SCORE: ${breakoutScore}`, canvas.width / 2, 75);
+            ctx.fillText(`LEVEL: ${breakoutLevel}`, canvas.width / 2, 85);
+            
+            // Retry options
+            ctx.textAlign = "left";
+            ctx.fillText(breakoutSelectedOption === 0 ? "▶ Retry" : "  Retry", 40, 105);
+            ctx.fillText(breakoutSelectedOption === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 120);
+            return;
+        }
+        
+        // Draw blocks
+        ctx.fillStyle = "#0f380f";
+        breakoutBlocks.forEach(block => {
+            if (block.visible) {
+                ctx.fillRect(block.x, block.y, block.width, block.height);
+            }
+        });
+        
+        // Draw paddle
+        ctx.fillStyle = "#0f380f";
+        ctx.fillRect(breakoutPaddle.x, breakoutPaddle.y, breakoutPaddle.width, breakoutPaddle.height);
+        
+        // Draw ball
+        ctx.beginPath();
+        ctx.arc(breakoutBall.x, breakoutBall.y, breakoutBall.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#0f380f";
+        ctx.fill();
+        ctx.closePath();
+        
+        // Draw score and lives
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`SCORE: ${breakoutScore}`, 5, 10);
+        ctx.textAlign = "right";
+        ctx.fillText(`LEVEL: ${breakoutLevel}`, 145, 10);
+        ctx.fillText(`LIVES: ${breakoutLives}`, 145, 20);
+        
+        // Draw instruction if ball is not moving
+        if (!breakoutBallMoving) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "8px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("PRESS A TO START", canvas.width / 2, 60);
+        }
+    }
+
+    // Handle button clicks for all games
+    function handleButtonClick(button) {
+        if (!isPoweredOn || isShuttingDown) return;
+
+        // Check if we're in a game over state
+        if (currentGame === "snake" && snakeGameOver) {
+            if (button === "up" || button === "down") {
+                snakeSelectedOption = snakeSelectedOption === 0 ? 1 : 0;
+                renderSnake();
+            } else if (button === "a") {
+                if (snakeSelectedOption === 0) {
+                    initSnake(); // Restart snake game
+                } else {
+                    currentGame = "menu";
+                    renderScreen();
+                }
+            }
+            return;
+        } else if (currentGame === "pong" && pongGameOver) {
+            if (button === "up" || button === "down") {
+                pongSelectedOption = pongSelectedOption === 0 ? 1 : 0;
+                renderPong();
+            } else if (button === "a") {
+                if (pongSelectedOption === 0) {
+                    initPong(); // Restart pong game
+                } else {
+                    currentGame = "menu";
+                    renderScreen();
+                }
+            }
+            return;
+        } else if (currentGame === "space-invaders" && siShowEndScreen) {
+            if (button === "up" || button === "down") {
+                siSelectedEndOption = (siSelectedEndOption === 0) ? 1 : 0;
+                renderSpaceInvaders();
+            } else if (button === "a") {
+                if (siSelectedEndOption === 0) {
+                    initSpaceInvaders(); // Restart Space Invaders
+                } else if (siSelectedEndOption === 1) {
+                    currentGame = "menu";
+                    renderScreen();
+                }
+            }
+            return;
+        } else if (currentGame === "tetris" && tetrisGameOver) {
+            if (button === "up" || button === "down") {
+                tetrisSelectedOption = tetrisSelectedOption === 0 ? 1 : 0;
+                renderTetris();
+            } else if (button === "a") {
+                if (tetrisSelectedOption === 0) {
+                    initTetris(); // Restart Tetris
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            }
+            return;
+        } else if (currentGame === "breakout" && breakoutGameOver) {
+            if (button === "up" || button === "down") {
+                breakoutSelectedOption = breakoutSelectedOption === 0 ? 1 : 0;
+                renderBreakout();
+            } else if (button === "a") {
+                if (breakoutSelectedOption === 0) {
+                    initBreakout(); // Restart Breakout
+                } else {
+                    currentGame = "menu";
+                    renderScreen();
+                }
+            }
+            return;
+        } else if (currentGame === "golf" && golfGameOver) {
+            if (button === "up" || button === "down") {
+                golfSelectedOption = golfSelectedOption === 0 ? 1 : 0;
+                renderGolf();
+            } else if (button === "a") {
+                if (golfSelectedOption === 0) {
+                    initGolf(); // Restart
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            }
+            return;
+        }
+
+        // Handle golf hole complete state
+        if (currentGame === "golf" && golfHoleComplete) {
+            if (button === "a") {
+                // Advance to next hole
+                golfCurrentCourse++;
+                
+                if (golfCurrentCourse >= golfCourses.length) {
+                    golfGameOver = true;
+                } else {
+                    initGolfHole();
+                }
+            }
+            return;
+        }
+
+        // Normal control flow for active gameplay
+        if (isPaused) {
+            if (button === "up" || button === "down") {
+                selectedMenuItem = (selectedMenuItem === 0) ? 1 : 0;
+                renderScreen();
+            } else if (button === "a") {
+                if (selectedMenuItem === 0) {
+                    isPaused = false;
+                    renderScreen();
+                } else {
+                    currentGame = "menu";
+                    isPaused = false;
+                    renderScreen();
+                }
+            }
+            return;
+        }
+
+        if (currentGame === "menu") {
+            if (button === "up") {
+                navigateMenu("up");
+            } else if (button === "down") {
+                navigateMenu("down");
+            } else if (button === "a") {
+                currentGame = menuItems[selectedMenuItem];
+                startGame(currentGame);
+            }
+        } else if (currentGame === "snake") {
+            if (button === "up" && snakeDirection !== "down") snakeDirection = "up";
+            else if (button === "down" && snakeDirection !== "up") snakeDirection = "down";
+            else if (button === "left" && snakeDirection !== "right") snakeDirection = "left";
+            else if (button === "right" && snakeDirection !== "left") snakeDirection = "right";
+        } else if (currentGame === "pong") {
+            if (button === "left") {
+                playerPaddle.x = Math.max(0, playerPaddle.x - 20);
+            } else if (button === "right") {
+                playerPaddle.x = Math.min(150 - playerPaddle.width, playerPaddle.x + 20);
+            }
+        } else if (currentGame === "space-invaders") {
+            if (button === "left") {
+                siPlayer.x = Math.max(0, siPlayer.x - 5);
+            } else if (button === "right") {
+                siPlayer.x = Math.min(150 - siPlayer.width, siPlayer.x + 5);
+            } else if (button === "a" && !siGameOver) {
+                if (siBullets.length < 3) {
+                    siBullets.push({
+                        x: siPlayer.x + siPlayer.width / 2 - 1,
+                        y: siPlayer.y - 5,
+                        width: 2,
+                        height: 5
+                    });
+                    // Play shooting sound
+                    playGameSound('space-shoot');
+                }
+            }
+        } else if (currentGame === "tetris") {
+            if (button === "left") {
+                moveTetrisBlockHorizontal(-1);
+            } else if (button === "right") {
+                moveTetrisBlockHorizontal(1);
+            } else if (button === "down") {
+                moveTetrisBlockDown();
+            } else if (button === "up" || button === "a") {
+                rotateTetrisBlock();
+            }
+        } else if (currentGame === "breakout") {
+            if (button === "left") {
+                breakoutPaddle.x = Math.max(0, breakoutPaddle.x - 20); // Increased from 10 to 20
+            } else if (button === "right") {
+                breakoutPaddle.x = Math.min(150 - breakoutPaddle.width, breakoutPaddle.x + 20); // Increased from 10 to 20
+            } else if ((button === "a" || button === "up") && !breakoutBallMoving) {
+                launchBreakoutBall();
+            }
+        } else if (currentGame === "golf") {
+            if (golfBallMoving) {
+                // Can't control during ball movement
+                return;
+            }
+            
+            if (button === "left") {
+                // Decrease angle (aim lower)
+                golfClub.angle = Math.max(10, golfClub.angle - 5);
+            } else if (button === "right") {
+                // Increase angle (aim higher)
+                golfClub.angle = Math.min(80, golfClub.angle + 5);
+            } else if (button === "a") {
+                swingGolfClub();
+            }
+        } else if (currentGame === "aceclimber") {
+            if (aceClimberGameOver) {
+                if (button === "up" || button === "down") {
+                    aceClimberSelectedOption = aceClimberSelectedOption === 0 ? 1 : 0;
+                    renderAceClimber();
+                } else if (button === "a") {
+                    if (aceClimberSelectedOption === 0) {
+                        initAceClimber(); // Restart AceClimber
+                    } else {
+                        currentGame = "menu";
+                        renderScreen();
+                    }
+                }
+                return;
+            } else if (button === "left") {
+                aceClimberPlayer.dx = -2;
+                aceClimberPlayer.facingRight = false;
+            } else if (button === "right") {
+                aceClimberPlayer.dx = 2;
+                aceClimberPlayer.facingRight = true;
+            } else if (button === "a") {
+                aceClimberJump();
+            }
+        } else if (currentGame === "pipemania") {
+            handlePipeManiaControls(button);
+        }
+    }
+
+    ////////////////////
+    // GOLF GAME
+    ////////////////////
+    let golfCourses = [
+            {
+                terrain: [
+                    {x: 0, y: 115, width: 150, height: 30}, // Ground
+                    {x: 100, y: 105, width: 20, height: 10}, // Sand trap
+                    {x: 50, y: 110, width: 10, height: 5}    // Small bump
+                ],
+                holeX: 130,
+                holeY: 115,
+                teeX: 20,
+                par: 3,
+                wind: Math.random() * 3 - 1.5 // Reduced wind from -2/2 to -1.5/1.5
+            },
+            {
+                terrain: [
+                    {x: 0, y: 115, width: 150, height: 30}, // Ground
+                    {x: 60, y: 105, width: 30, height: 10},  // Hill
+                    {x: 110, y: 105, width: 15, height: 10}  // Hill
+                ],
+                holeX: 90,
+                holeY: 115,
+                teeX: 20,
+                par: 4,
+                wind: Math.random() * 3 - 1.5
+            },
+            {
+                terrain: [
+                    {x: 0, y: 115, width: 65, height: 30},   // First section - widened from 50 to 65
+                    {x: 65, y: 115, width: 85, height: 30},  // Second section - moved left from 70 to 65 to eliminate gap
+                    {x: 80, y: 105, width: 20, height: 10}   // Elevated section - narrowed from 40 to 20 and moved hole off it
+                ],
+                holeX: 130,
+                holeY: 115,                                  // Moved hole away from obstacles
+                teeX: 20,
+                par: 5,
+                wind: Math.random() * 4 - 2                  // Reduced wind from -3/3 to -2/2
+            }
+        ];
+    let golfCurrentCourse = 0;
+    let golfBall = {};
+    let golfClub = {
+        angle: 45, // In degrees (45 is a good starting angle)
+        power: 0,
+        maxPower: 5 // Reduced from 10 to 5 to make shots more controlled
+    };
+    let golfPowerMeter = {};
+    let golfSwinging = false;
+    let golfBallMoving = false;
+    let golfScore = 0;
+    let golfStrokes = 0;
+    let golfPar = 0;
+    let golfGameOver = false;
+    let golfSelectedOption = 0;
+    let golfWind = 0;
+    let golfHoleComplete = false;
+    let golfHoleInOne = false;
+    let golfLastUpdateTime = 0;
+
+    // Initialize Golf game
+    function initGolf() {
+        golfCurrentCourse = 0;
+        golfScore = 0;
+        golfGameOver = false;
+        golfSelectedOption = 0;
+        
+        // Initialize the first hole
+        initGolfHole();
+    }
+
+    // Initialize a specific golf hole
+    function initGolfHole() {
+        const course = golfCourses[golfCurrentCourse];
+        
+        golfBall = {
+            x: course.teeX,
+            y: 110, // Just above ground level
+            radius: 2,
+            dx: 0,
+            dy: 0,
+            stopped: true
+        };
+        
+        golfClub = {
+            angle: 45, // In degrees (45 is a good starting angle)
+            power: 0,
+            maxPower: 5 // Reduced from 10 to 5 to make shots more controlled
+        };
+        
+        golfPowerMeter = {
+            charging: false,
+            power: 0,
+            direction: 1, // 1 for increasing, -1 for decreasing
+            speed: 0.05   // How fast the power meter changes
+        };
+        
+        golfSwinging = false;
+        golfBallMoving = false;
+        golfStrokes = 0;
+        golfPar = course.par;
+        golfWind = course.wind;
+        golfHoleComplete = false;
+        golfHoleInOne = false;
+    }
+
+    // Update Golf game state
+    function updateGolf(timestamp) {
+        if (golfGameOver) return;
+        
+        // Only update several times per second, not every frame
+        if (timestamp - golfLastUpdateTime < 16) return; // ~60 FPS
+        golfLastUpdateTime = timestamp;
+        
+        // If the hole is complete, wait for player input to continue
+        if (golfHoleComplete) return;
+        
+        // Update power meter when charging
+        if (golfPowerMeter.charging) {
+            golfPowerMeter.power += golfPowerMeter.direction * golfPowerMeter.speed;
+            
+            // Reverse direction at limits
+            if (golfPowerMeter.power >= 1) {
+                golfPowerMeter.direction = -1;
+            } else if (golfPowerMeter.power <= 0) {
+                golfPowerMeter.direction = 1;
+            }
+        }
+        
+        // Update ball physics when in motion
+        if (golfBallMoving) {
+            // Apply gravity
+            golfBall.dy += 0.1;
+            
+            // Apply wind effect
+            golfBall.dx += golfWind * 0.001;
+            
+            // Store previous position for collision detection
+            const prevX = golfBall.x;
+            const prevY = golfBall.y;
+            
+            // Update position
+            golfBall.x += golfBall.dx;
+            golfBall.y += golfBall.dy;
+            
+            // Check for collisions with terrain
+            const course = golfCourses[golfCurrentCourse];
+            let onGround = false;
+            
+            for (const terrain of course.terrain) {
+                // Check if ball is within horizontal bounds of terrain
+                if (golfBall.x >= terrain.x && golfBall.x <= terrain.x + terrain.width) {
+                    
+                    // Check if ball has passed through the terrain in this frame
+                    // (by checking if previous position was above and current is below)
+                    if ((prevY + golfBall.radius <= terrain.y && golfBall.y + golfBall.radius >= terrain.y) || 
+                        // Also check if ball is directly on top or just inside the terrain
+                        (golfBall.y + golfBall.radius >= terrain.y && golfBall.y - golfBall.radius <= terrain.y)) {
+                        
+                        // Place ball on top of terrain and stop vertical movement
+                        golfBall.y = terrain.y - golfBall.radius;
+                        
+                        // Apply friction to horizontal movement
+                        golfBall.dx *= 0.9;
+                        
+                        // If terrain is sand, apply more friction
+                        if (terrain.x === 100 && terrain.y === 105) { // Sand trap coordinates
+                            golfBall.dx *= 0.7;
+                        }
+                        
+                        // Check if ball is slow enough to stop
+                        if (Math.abs(golfBall.dx) < 0.1) {
+                            golfBall.dx = 0;
+                            
+                            // If ball has stopped completely
+                            if (golfBall.dx === 0) {
+                                golfBallMoving = false;
+                            }
+                        }
+                        
+                        golfBall.dy = 0;
+                        onGround = true;
+                        break;
+                    }
+                }
+            }
+            
+            // Check for out of bounds
+            if (golfBall.x < 0 || golfBall.x > 150 || golfBall.y > 160) {
+                // Reset ball to tee
+                golfBall.x = course.teeX;
+                golfBall.y = 110;
+                golfBall.dx = 0;
+                golfBall.dy = 0;
+                golfBallMoving = false;
+                golfStrokes++;
+            }
+            
+            // Check if ball fell in hole
+            const distanceToHole = Math.sqrt(
+                Math.pow(golfBall.x - course.holeX, 2) + 
+                Math.pow(golfBall.y - course.holeY, 2)
+            );
+            
+            if (distanceToHole < 3 && Math.abs(golfBall.dx) < 1) {
+                // Ball in hole!
+                golfBallMoving = false;
+                golfHoleComplete = true;
+                
+                // Check if it's a hole in one
+                if (golfStrokes === 1) {
+                    golfHoleInOne = true;
+                }
+                
+                // Play hole-in sound
+                playGolfHoleSound();
+                
+                // Update score
+                golfScore += golfStrokes - golfPar;
+                
+                // Check if game is over (3 holes)
+                if (golfCurrentCourse >= golfCourses.length - 1) {
+                    golfGameOver = true;
+                }
+            }
+        }
+    }
+
+    // Swing the club and hit the ball
+    function swingGolfClub() {
+        if (golfBallMoving || golfHoleComplete) return;
+        
+        if (!golfPowerMeter.charging) {
+            // Start charging the power meter
+            golfPowerMeter.charging = true;
+            golfPowerMeter.power = 0;
+            golfPowerMeter.direction = 1;
+        } else {
+            // Stop charging and hit the ball
+            golfPowerMeter.charging = false;
+            
+            // Calculate power based on meter
+            const power = golfPowerMeter.power * golfClub.maxPower;
+            
+            // Convert angle to radians
+            const angleRad = golfClub.angle * Math.PI / 180;
+            
+            // Set ball velocity based on power and angle
+            golfBall.dx = power * Math.cos(angleRad);
+            golfBall.dy = -power * Math.sin(angleRad);
+            
+            // Ball is now moving
+            golfBallMoving = true;
+            
+            // Increment stroke count
+            golfStrokes++;
+            
+            // Play swing sound
+            playGolfSwingSound();
+        }
+    }
+
+    // Play golf swing sound
+    function playGolfSwingSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Club swing/hit sound
+            oscillator.type = 'triangle';
+            oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            
+            // Quick frequency ramp for impact
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.1);
+            
+            // Quick decay
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 200);
+        } catch (e) {
+            console.error("Could not create golf swing sound:", e);
+        }
+    }
+
+    // Play hole-in sound
+    function playGolfHoleSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            
+            // Create a series of notes for a little jingle
+            const notes = [
+                { freq: 330, duration: 0.1 },  // E4
+                { freq: 392, duration: 0.1 },  // G4
+                { freq: 494, duration: 0.1 },  // B4
+                { freq: 523, duration: 0.3 }   // C5 (longer)
+            ];
+            
+            // Play each note in sequence
+            let timeOffset = 0;
+            
+            notes.forEach(note => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(note.freq, audioCtx.currentTime + timeOffset);
+                
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime + timeOffset);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + timeOffset + note.duration);
+                
+                oscillator.start(audioCtx.currentTime + timeOffset);
+                oscillator.stop(audioCtx.currentTime + timeOffset + note.duration);
+                
+                timeOffset += note.duration;
+            });
+        } catch (e) {
+            console.error("Could not create hole-in sound:", e);
+        }
+    }
+
+    // Handle Golf controls
+    function handleGolfControls(key) {
+        if (golfGameOver) {
+            if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+                golfSelectedOption = golfSelectedOption === 0 ? 1 : 0;
+            } else if (key === "Enter" || key === " " || key === "a") {
+                if (golfSelectedOption === 0) {
+                    initGolf(); // Restart
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            }
+            return;
+        }
+        
+        if (golfHoleComplete) {
+            if (key === "Enter" || key === " " || key === "a") {
+                // Advance to next hole
+                golfCurrentCourse++;
+                
+                if (golfCurrentCourse >= golfCourses.length) {
+                    golfGameOver = true;
+                } else {
+                    initGolfHole();
+                }
+            } else if (key === "Escape" || key === "Backspace" || key === "b") {
+                // Go back to menu
+                currentGame = "menu";
+                renderScreen();
+            }
+            return;
+        }
+        
+        if (golfBallMoving) {
+            // Can't control during ball movement
+            return;
+        }
+        
+        if (key === "ArrowLeft" || key === "a") {
+            // Decrease angle (aim lower)
+            golfClub.angle = Math.max(10, golfClub.angle - 5);
+        } else if (key === "ArrowRight" || key === "d") {
+            // Increase angle (aim higher)
+            golfClub.angle = Math.min(80, golfClub.angle + 5);
+        } else if (key === " " || key === "Enter") {
+            swingGolfClub();
+        }
+    }
+
+    // Render Golf game
+    function renderGolf() {
+        ctx.fillStyle = "#9bbc0f"; // Light green background
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (golfGameOver) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            
+            if (golfScore > 0) {
+                ctx.fillText(`FINAL SCORE: +${golfScore}`, canvas.width / 2, 75);
+            } else if (golfScore < 0) {
+                ctx.fillText(`FINAL SCORE: ${golfScore}`, canvas.width / 2, 75); // Negative is already shown with -
+            } else {
+                ctx.fillText(`FINAL SCORE: EVEN PAR`, canvas.width / 2, 75);
+            }
+            
+            // Retry options
+            ctx.textAlign = "left";
+            ctx.fillText(golfSelectedOption === 0 ? "▶ Play Again" : "  Play Again", 40, 95);
+            ctx.fillText(golfSelectedOption === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 110);
+            return;
+        }
+        
+        const course = golfCourses[golfCurrentCourse];
+        
+        // Draw sky
+        ctx.fillStyle = "#8bac0f"; // Medium green for sky
+        ctx.fillRect(0, 0, 150, 115);
+        
+        // Draw hole flag
+        ctx.fillStyle = "#0f380f"; // Dark green
+        ctx.fillRect(course.holeX, course.holeY - 20, 1, 20); // Flag pole
+        ctx.fillRect(course.holeX, course.holeY - 20, 6, 4); // Flag
+        
+        // Draw terrain
+        ctx.fillStyle = "#0f380f";
+        for (const terrain of course.terrain) {
+            ctx.fillRect(terrain.x, terrain.y, terrain.width, terrain.height);
+        }
+        
+        // Draw hole
+        ctx.fillStyle = "#8bac0f"; // Medium green
+        ctx.beginPath();
+        ctx.arc(course.holeX, course.holeY, 2, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Draw ball
+        ctx.fillStyle = "#0f380f";
+        ctx.beginPath();
+        ctx.arc(golfBall.x, golfBall.y, golfBall.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // If ball is not moving, draw the club and aiming line
+        if (!golfBallMoving && !golfHoleComplete) {
+            // Draw club
+            const clubLength = 8;
+            const angleRad = golfClub.angle * Math.PI / 180;
+            const clubEndX = golfBall.x - clubLength * Math.cos(angleRad);
+            const clubEndY = golfBall.y + clubLength * Math.sin(angleRad);
+            
+            ctx.strokeStyle = "#0f380f";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(golfBall.x, golfBall.y);
+            ctx.lineTo(clubEndX, clubEndY);
+            ctx.stroke();
+            
+            // Draw aiming line (dashed)
+            if (!golfPowerMeter.charging) {
+                const aimLineLength = 20;
+                const aimEndX = golfBall.x + aimLineLength * Math.cos(angleRad);
+                const aimEndY = golfBall.y - aimLineLength * Math.sin(angleRad);
+                
+                ctx.setLineDash([2, 2]);
+                ctx.beginPath();
+                ctx.moveTo(golfBall.x, golfBall.y);
+                ctx.lineTo(aimEndX, aimEndY);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            // Draw power meter if charging
+            if (golfPowerMeter.charging) {
+                // Background
+                ctx.fillStyle = "#8bac0f";
+                ctx.fillRect(10, 130, 130, 10);
+                
+                // Power level
+                ctx.fillStyle = "#0f380f";
+                ctx.fillRect(10, 130, 130 * golfPowerMeter.power, 10);
+            }
+        }
+        
+        // Draw hole complete message
+        if (golfHoleComplete) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            
+            if (golfHoleInOne) {
+                ctx.fillText("HOLE IN ONE!", canvas.width / 2, 50);
+            } else if (golfStrokes < golfPar) {
+                ctx.fillText(`BIRDIE!`, canvas.width / 2, 50);
+            } else if (golfStrokes === golfPar) {
+                ctx.fillText(`PAR`, canvas.width / 2, 50);
+            } else if (golfStrokes === golfPar + 1) {
+                ctx.fillText(`BOGEY`, canvas.width / 2, 50);
+            } else {
+                ctx.fillText(`+${golfStrokes - golfPar}`, canvas.width / 2, 50);
+            }
+            
+            ctx.font = "8px Arial";
+            ctx.fillText("PRESS A TO CONTINUE", canvas.width / 2, 65);
+        }
+        
+        // Draw score and hole info
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`HOLE: ${golfCurrentCourse + 1}/${golfCourses.length}`, 5, 10);
+        ctx.fillText(`PAR: ${golfPar}`, 5, 20);
+        ctx.fillText(`STROKES: ${golfStrokes}`, 5, 30);
+        
+        // Draw total score
+        ctx.textAlign = "right";
+        if (golfScore > 0) {
+            ctx.fillText(`SCORE: +${golfScore}`, 145, 10);
+        } else if (golfScore < 0) {
+            ctx.fillText(`SCORE: ${golfScore}`, 145, 10); // Negative already has -
+        } else {
+            ctx.fillText(`SCORE: E`, 145, 10); // E for Even par
+        }
+        
+        // Draw wind indicator
+        ctx.textAlign = "center";
+        ctx.fillText(`WIND: ${golfWind > 0 ? '→' : '←'} ${Math.abs(golfWind).toFixed(1)}`, 75, 10);
+        
+        // Draw instructions if not moving
+        if (!golfBallMoving && !golfHoleComplete && !golfPowerMeter.charging) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "8px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("←→ AIM, A TO SWING", canvas.width / 2, 50);
+        }
+    }
+
+    ////////////////////
+    // ACECLIMBER GAME
+    ////////////////////
+    
+    // AceClimber game variables
+    let aceClimberPlayer = {};
+    let aceClimberPlatforms = [];
+    let aceClimberEnemies = [];
+    let aceClimberIcicles = [];
+    let aceClimberScore = 0;
+    let aceClimberHighScore = 0;
+    let aceClimberLevel = 1;
+    let aceClimberLives = 3;
+    let aceClimberGameOver = false;
+    let aceClimberSelectedOption = 0;
+    let aceClimberJumping = false;
+    let aceClimberLastUpdateTime = 0;
+    let aceClimberScrollOffset = 0;
+    let aceClimberInvincible = false;
+    let aceClimberInvincibleTimer = 0;
+
+    // Initialize AceClimber game
+    function initAceClimber() {
+        // Initialize player
+        aceClimberPlayer = {
+            x: 75,
+            y: 140,
+            width: 8,
+            height: 10,
+            dx: 0,
+            dy: 0,
+            jumping: false,
+            facingRight: true
+        };
+        
+        // Reset game state
+        aceClimberPlatforms = [];
+        aceClimberEnemies = [];
+        aceClimberIcicles = [];
+        aceClimberScore = 0;
+        aceClimberLevel = 1;
+        aceClimberLives = 3;
+        aceClimberGameOver = false;
+        aceClimberSelectedOption = 0;
+        aceClimberJumping = false;
+        aceClimberScrollOffset = 0;
+        aceClimberInvincible = false;
+        aceClimberInvincibleTimer = 0;
+        
+        // Generate initial platforms
+        generateAceClimberPlatforms();
+    }
+
+    // Generate platforms
+    function generateAceClimberPlatforms() {
+        aceClimberPlatforms = [];
+        
+        // Ground platform
+        aceClimberPlatforms.push({
+            x: 0,
+            y: 150,
+            width: 150,
+            height: 10
+        });
+        
+        // Generate random platforms
+        const numPlatforms = 15 + aceClimberLevel * 5; // More platforms for higher levels
+        
+        for (let i = 0; i < numPlatforms; i++) {
+            const platformWidth = Math.random() * 30 + 30; // Between 30-60 pixels
+            const platformX = Math.random() * (150 - platformWidth);
+            const platformY = 140 - (i * 30) - Math.random() * 10; // Platforms get higher
+            
+            aceClimberPlatforms.push({
+                x: platformX,
+                y: platformY,
+                width: platformWidth,
+                height: 5
+            });
+            
+            // Add enemies on some platforms (about 1/3 chance)
+            if (Math.random() < 0.3) {
+                aceClimberEnemies.push({
+                    x: platformX + Math.random() * (platformWidth - 8),
+                    y: platformY - 8,
+                    width: 8,
+                    height: 8,
+                    dx: (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.5),
+                    platformIndex: aceClimberPlatforms.length - 1
+                });
+            }
+            
+            // Add icicles above some platforms (about 1/4 chance)
+            if (Math.random() < 0.25 && i > 0) {
+                aceClimberIcicles.push({
+                    x: platformX + Math.random() * (platformWidth - 6),
+                    y: platformY - 60,
+                    width: 6,
+                    height: 10,
+                    falling: false,
+                    fallSpeed: 2 + Math.random() * 2
+                });
+            }
+        }
+    }
+
+    // Update AceClimber game state
+    function updateAceClimber(timestamp) {
+        if (aceClimberGameOver) return;
+        
+        // Throttle updates to 60 FPS
+        if (timestamp - aceClimberLastUpdateTime < 16) return;
+        aceClimberLastUpdateTime = timestamp;
+        
+        // Update player position based on velocity
+        aceClimberPlayer.x += aceClimberPlayer.dx;
+        aceClimberPlayer.y += aceClimberPlayer.dy;
+        
+        // Apply gravity
+        aceClimberPlayer.dy += 0.2;
+        
+        // Check for horizontal bounds
+        if (aceClimberPlayer.x < 0) {
+            aceClimberPlayer.x = 0;
+        } else if (aceClimberPlayer.x + aceClimberPlayer.width > 150) {
+            aceClimberPlayer.x = 150 - aceClimberPlayer.width;
+        }
+        
+        // Handle invincibility timer
+        if (aceClimberInvincible) {
+            aceClimberInvincibleTimer--;
+            if (aceClimberInvincibleTimer <= 0) {
+                aceClimberInvincible = false;
+            }
+        }
+        
+        // Check for platform collisions
+        let onPlatform = false;
+        
+        for (const platform of aceClimberPlatforms) {
+            // Only check collision if player is falling
+            if (aceClimberPlayer.dy > 0) {
+                // Check if player's feet are at platform level
+                if (aceClimberPlayer.y + aceClimberPlayer.height >= platform.y && 
+                    aceClimberPlayer.y + aceClimberPlayer.height <= platform.y + platform.height) {
+                    
+                    // Check if player is horizontally within platform bounds
+                    if (aceClimberPlayer.x + aceClimberPlayer.width > platform.x && 
+                        aceClimberPlayer.x < platform.x + platform.width) {
+                        
+                        // Place player on top of platform
+                        aceClimberPlayer.y = platform.y - aceClimberPlayer.height;
+                        aceClimberPlayer.dy = 0;
+                        aceClimberJumping = false;
+                        onPlatform = true;
+                        
+                        // Increase score if climbing higher
+                        const screenY = aceClimberPlayer.y + aceClimberScrollOffset;
+                        if (screenY < aceClimberScore) {
+                            aceClimberScore = Math.floor(screenY);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Check for enemy collisions
+        if (!aceClimberInvincible) {
+            for (const enemy of aceClimberEnemies) {
+                if (checkAceClimberCollision(aceClimberPlayer, enemy)) {
+                    // Player hit by enemy
+                    aceClimberLives--;
+                    
+                    if (aceClimberLives <= 0) {
+                        aceClimberGameOver = true;
+                        
+                        // Update high score
+                        if (Math.abs(aceClimberScore) > aceClimberHighScore) {
+                            aceClimberHighScore = Math.abs(aceClimberScore);
+                        }
+                    } else {
+                        // Make player invincible briefly
+                        aceClimberInvincible = true;
+                        aceClimberInvincibleTimer = 60; // About 1 second at 60 FPS
+                        
+                        // Play hurt sound
+                        playAceClimberHurtSound();
+                    }
+                }
+            }
+        }
+        
+        // Check for icicle collisions
+        for (let i = aceClimberIcicles.length - 1; i >= 0; i--) {
+            const icicle = aceClimberIcicles[i];
+            
+            // Check if player is below icicle
+            if (!icicle.falling && Math.abs(aceClimberPlayer.x - icicle.x) < 20) {
+                icicle.falling = true;
+            }
+            
+            // Update falling icicles
+            if (icicle.falling) {
+                icicle.y += icicle.fallSpeed;
+                
+                // Check if icicle hit player
+                if (!aceClimberInvincible && checkAceClimberCollision(aceClimberPlayer, icicle)) {
+                    // Player hit by icicle
+                    aceClimberLives--;
+                    
+                    if (aceClimberLives <= 0) {
+                        aceClimberGameOver = true;
+                        
+                        // Update high score
+                        if (Math.abs(aceClimberScore) > aceClimberHighScore) {
+                            aceClimberHighScore = Math.abs(aceClimberScore);
+                        }
+                    } else {
+                        // Make player invincible briefly
+                        aceClimberInvincible = true;
+                        aceClimberInvincibleTimer = 60; // About 1 second at 60 FPS
+                        
+                        // Play hurt sound
+                        playAceClimberHurtSound();
+                    }
+                    
+                    // Remove the icicle
+                    aceClimberIcicles.splice(i, 1);
+                }
+                // Remove icicles that fall off screen
+                else if (icicle.y > 160) {
+                    aceClimberIcicles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update enemies
+        for (const enemy of aceClimberEnemies) {
+            // Move enemy horizontally
+            enemy.x += enemy.dx;
+            
+            // Check platform boundaries
+            const platform = aceClimberPlatforms[enemy.platformIndex];
+            if (enemy.x < platform.x) {
+                enemy.x = platform.x;
+                enemy.dx *= -1;
+            } else if (enemy.x + enemy.width > platform.x + platform.width) {
+                enemy.x = platform.x + platform.width - enemy.width;
+                enemy.dx *= -1;
+            }
+        }
+        
+        // Handle scrolling when player reaches top third of screen
+        if (aceClimberPlayer.y < 50) {
+            const scrollAmount = 50 - aceClimberPlayer.y;
+            aceClimberScrollOffset += scrollAmount;
+            aceClimberPlayer.y = 50;
+            
+            // Adjust all platforms, enemies, and icicles for scrolling
+            for (const platform of aceClimberPlatforms) {
+                platform.y += scrollAmount;
+            }
+            
+            for (const enemy of aceClimberEnemies) {
+                enemy.y += scrollAmount;
+            }
+            
+            for (const icicle of aceClimberIcicles) {
+                icicle.y += scrollAmount;
+            }
+            
+            // If the lowest platform goes off-screen, remove it
+            // And add a new one at the top
+            if (aceClimberPlatforms[0].y > 160) {
+                aceClimberPlatforms.shift();
+                aceClimberEnemies = aceClimberEnemies.filter(enemy => enemy.platformIndex !== 0);
+                
+                // Decrement platform indices for remaining enemies
+                for (const enemy of aceClimberEnemies) {
+                    enemy.platformIndex--;
+                }
+                
+                // Add a new platform at the top
+                const platformWidth = Math.random() * 30 + 30; // Between 30-60 pixels
+                const platformX = Math.random() * (150 - platformWidth);
+                const highestPlatform = aceClimberPlatforms.reduce((highest, platform) => 
+                    platform.y < highest.y ? platform : highest, {y: 160});
+                const platformY = highestPlatform.y - 30 - Math.random() * 10;
+                
+                aceClimberPlatforms.push({
+                    x: platformX,
+                    y: platformY,
+                    width: platformWidth,
+                    height: 5
+                });
+                
+                // Possibly add an enemy on this platform
+                if (Math.random() < 0.3) {
+                    aceClimberEnemies.push({
+                        x: platformX + Math.random() * (platformWidth - 8),
+                        y: platformY - 8,
+                        width: 8,
+                        height: 8,
+                        dx: (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.5),
+                        platformIndex: aceClimberPlatforms.length - 1
+                    });
+                }
+                
+                // Possibly add an icicle above this platform
+                if (Math.random() < 0.25) {
+                    aceClimberIcicles.push({
+                        x: platformX + Math.random() * (platformWidth - 6),
+                        y: platformY - 60,
+                        width: 6,
+                        height: 10,
+                        falling: false,
+                        fallSpeed: 2 + Math.random() * 2
+                    });
+                }
+            }
+        }
+        
+        // Check if player has fallen off screen
+        if (aceClimberPlayer.y > 160) {
+            aceClimberLives--;
+            
+            if (aceClimberLives <= 0) {
+                aceClimberGameOver = true;
+                
+                // Update high score
+                if (Math.abs(aceClimberScore) > aceClimberHighScore) {
+                    aceClimberHighScore = Math.abs(aceClimberScore);
+                }
+            } else {
+                // Reset player position to a safe platform
+                const safePlatform = aceClimberPlatforms.find(p => p.y < 140 && p.y > 70);
+                if (safePlatform) {
+                    aceClimberPlayer.x = safePlatform.x + safePlatform.width / 2 - aceClimberPlayer.width / 2;
+                    aceClimberPlayer.y = safePlatform.y - aceClimberPlayer.height;
+                    aceClimberPlayer.dy = 0;
+                } else {
+                    // If no safe platform, just put them on the bottom one
+                    const bottomPlatform = aceClimberPlatforms.reduce((lowest, platform) => 
+                        platform.y > lowest.y ? platform : lowest, {y: -1});
+                    aceClimberPlayer.x = bottomPlatform.x + bottomPlatform.width / 2 - aceClimberPlayer.width / 2;
+                    aceClimberPlayer.y = bottomPlatform.y - aceClimberPlayer.height;
+                    aceClimberPlayer.dy = 0;
+                }
+                
+                // Make player invincible briefly
+                aceClimberInvincible = true;
+                aceClimberInvincibleTimer = 60; // About 1 second at 60 FPS
+                
+                // Play hurt sound
+                playAceClimberHurtSound();
+            }
+        }
+        
+        // Level up every 1000 points
+        if (Math.abs(aceClimberScore) > aceClimberLevel * 1000) {
+            aceClimberLevel++;
+            
+            // Play level up sound
+            playAceClimberLevelUpSound();
+        }
+    }
+
+    // Check collision between two objects
+    function checkAceClimberCollision(obj1, obj2) {
+        return obj1.x < obj2.x + obj2.width &&
+               obj1.x + obj1.width > obj2.x &&
+               obj1.y < obj2.y + obj2.height &&
+               obj1.y + obj1.height > obj2.y;
+    }
+
+    // Make the player jump
+    function aceClimberJump() {
+        if (!aceClimberJumping) {
+            aceClimberPlayer.dy = -5;
+            aceClimberJumping = true;
+            
+            // Play jump sound
+            playAceClimberJumpSound();
+        }
+    }
+
+    // Play AceClimber jump sound
+    function playAceClimberJumpSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Jump sound
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            
+            // Sweep up for jump
+            oscillator.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.1);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+            
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 200);
+        } catch (e) {
+            console.error("Could not create AceClimber jump sound:", e);
+        }
+    }
+
+    // Play AceClimber hurt sound
+    function playAceClimberHurtSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            // Hurt sound - descending notes
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(200, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            
+            // Sweep down for hurt
+            oscillator.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.3);
+            
+            oscillator.start();
+            setTimeout(() => oscillator.stop(), 300);
+        } catch (e) {
+            console.error("Could not create AceClimber hurt sound:", e);
+        }
+    }
+
+    // Play AceClimber level up sound
+    function playAceClimberLevelUpSound() {
+        try {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const audioCtx = new AudioContext();
+            
+            // Create a sequence of notes for level up jingle
+            const notes = [
+                { freq: 330, duration: 0.1 },  // E4
+                { freq: 392, duration: 0.1 },  // G4
+                { freq: 494, duration: 0.1 },  // B4
+                { freq: 659, duration: 0.2 }   // E5 (longer)
+            ];
+            
+            // Play each note in sequence
+            let timeOffset = 0;
+            
+            notes.forEach(note => {
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                
+                oscillator.type = 'square';
+                oscillator.frequency.setValueAtTime(note.freq, audioCtx.currentTime + timeOffset);
+                
+                gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime + timeOffset);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + timeOffset + note.duration);
+                
+                oscillator.start(audioCtx.currentTime + timeOffset);
+                oscillator.stop(audioCtx.currentTime + timeOffset + note.duration);
+                
+                timeOffset += note.duration;
+            });
+        } catch (e) {
+            console.error("Could not create AceClimber level up sound:", e);
+        }
+    }
+
+    // Handle AceClimber controls
+    function handleAceClimberControls(key) {
+        if (aceClimberGameOver) {
+            if (key === "ArrowUp" || key === "w" || key === "ArrowDown" || key === "s") {
+                aceClimberSelectedOption = aceClimberSelectedOption === 0 ? 1 : 0;
+            } else if (key === "Enter" || key === " " || key === "a") {
+                if (aceClimberSelectedOption === 0) {
+                    initAceClimber(); // Retry
+                } else {
+                    currentGame = "menu"; // Exit to menu
+                    renderScreen();
+                }
+            } else if (key === "Escape" || key === "Backspace" || key === "b") {
+                // Go back to menu
+                currentGame = "menu";
+                renderScreen();
+            }
+            return;
+        }
+        
+        if (key === "ArrowLeft" || key === "a") {
+            aceClimberPlayer.dx = -2;
+            aceClimberPlayer.facingRight = false;
+        } else if (key === "ArrowRight" || key === "d") {
+            aceClimberPlayer.dx = 2;
+            aceClimberPlayer.facingRight = true;
+        } else if (key === "ArrowUp" || key === "w" || key === " ") {
+            aceClimberJump();
+        }
+    }
+
+    // Render AceClimber game
+    function renderAceClimber() {
+        ctx.fillStyle = "#9bbc0f"; // Light green background
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (aceClimberGameOver) {
+            ctx.fillStyle = "#0f380f";
+            ctx.font = "16px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("GAME OVER", canvas.width / 2, 60);
+            
+            ctx.font = "8px Arial";
+            ctx.fillText(`SCORE: ${Math.abs(aceClimberScore)}`, canvas.width / 2, 75);
+            ctx.fillText(`HIGH SCORE: ${aceClimberHighScore}`, canvas.width / 2, 85);
+            
+            // Retry options
+            ctx.textAlign = "left";
+            ctx.fillText(aceClimberSelectedOption === 0 ? "▶ Play Again" : "  Play Again", 40, 105);
+            ctx.fillText(aceClimberSelectedOption === 1 ? "▶ Exit to Menu" : "  Exit to Menu", 40, 120);
+            return;
+        }
+        
+        // Draw platforms
+        ctx.fillStyle = "#0f380f"; // Dark green
+        for (const platform of aceClimberPlatforms) {
+            ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+        }
+        
+        // Draw enemies
+        ctx.fillStyle = "#0f380f";
+        for (const enemy of aceClimberEnemies) {
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+        }
+        
+        // Draw icicles
+        ctx.fillStyle = "#8bac0f"; // Medium green
+        for (const icicle of aceClimberIcicles) {
+            ctx.beginPath();
+            ctx.moveTo(icicle.x, icicle.y);
+            ctx.lineTo(icicle.x + icicle.width, icicle.y);
+            ctx.lineTo(icicle.x + icicle.width / 2, icicle.y + icicle.height);
+            ctx.closePath();
+            ctx.fill();
+        }
+        
+        // Draw player (blinking if invincible)
+        if (!aceClimberInvincible || Math.floor(aceClimberInvincibleTimer / 5) % 2 === 0) {
+            ctx.fillStyle = "#0f380f";
+            ctx.fillRect(aceClimberPlayer.x, aceClimberPlayer.y, aceClimberPlayer.width, aceClimberPlayer.height);
+            
+            // Draw player's face direction
+            ctx.fillStyle = "#9bbc0f"; // Light green
+            if (aceClimberPlayer.facingRight) {
+                ctx.fillRect(aceClimberPlayer.x + aceClimberPlayer.width - 2, aceClimberPlayer.y + 2, 2, 2);
+            } else {
+                ctx.fillRect(aceClimberPlayer.x, aceClimberPlayer.y + 2, 2, 2);
+            }
+        }
+        
+        // Draw score and level
+        ctx.fillStyle = "#0f380f";
+        ctx.font = "8px Arial";
+        ctx.textAlign = "left";
+        ctx.fillText(`SCORE: ${Math.abs(aceClimberScore)}`, 5, 10);
+        ctx.fillText(`LEVEL: ${aceClimberLevel}`, 5, 20);
+        
+        // Draw lives
+        ctx.textAlign = "right";
+        ctx.fillText(`LIVES: ${aceClimberLives}`, 145, 10);
+        
+        // Draw high score
+        ctx.fillText(`HI: ${aceClimberHighScore}`, 145, 20);
+    }
+
+    // Initialize the simulator
+    init();
+
+    // Add keyup handling for AceClimber to stop movement
+    document.addEventListener('keyup', function(e) {
+        if (currentGame === "aceclimber") {
+            if (e.key === "ArrowLeft" || e.key === "a" || e.key === "ArrowRight" || e.key === "d") {
+                aceClimberPlayer.dx = 0;
+            }
+        }
+    });
+
+    // Add touch start/end (and mouse down/up) handlers for dpad buttons
+    dpadLeft.addEventListener('mousedown', handleDpadPress);
+    dpadLeft.addEventListener('touchstart', handleDpadPress);
+    dpadLeft.addEventListener('mouseup', handleDpadRelease);
+    dpadLeft.addEventListener('touchend', handleDpadRelease);
+
+    dpadRight.addEventListener('mousedown', handleDpadPress);
+    dpadRight.addEventListener('touchstart', handleDpadPress);
+    dpadRight.addEventListener('mouseup', handleDpadRelease);
+    dpadRight.addEventListener('touchend', handleDpadRelease);
+
+    function handleDpadPress(e) {
+        if (currentGame === "aceclimber") {
+            if (this.id === 'dpad-left') {
+                aceClimberPlayer.dx = -2;
+                aceClimberPlayer.facingRight = false;
+            } else if (this.id === 'dpad-right') {
+                aceClimberPlayer.dx = 2;
+                aceClimberPlayer.facingRight = true;
+            }
+        }
+    }
+
+    function handleDpadRelease() {
+        if (currentGame === "aceclimber") {
+            aceClimberPlayer.dx = 0;
+        }
+    }
+
+    // Add a helper function to handle game over actions
+    function handleGameOverAction() {
+        if (currentGame === "snake" && snakeGameOver) {
+            initSnake(); // Restart Snake
+        } else if (currentGame === "pong" && pongGameOver) {
+            initPong(); // Restart Pong
+        } else if (currentGame === "space-invaders" && siGameOver) {
+            initSpaceInvaders(); // Restart Space Invaders
+        } else if (currentGame === "tetris" && tetrisGameOver) {
+            // For Tetris, respect the menu selection rather than instantly restarting
+            if (tetrisSelectedOption === 0) {
+                initTetris(); // Restart Tetris
+            } else {
+                currentGame = "menu"; // Exit to menu
+                renderScreen();
+            }
+        } else if (currentGame === "breakout" && breakoutGameOver) {
+            initBreakout(); // Restart Breakout
+        } else if (currentGame === "golf" && golfGameOver) {
+            initGolf(); // Restart Golf
+        } else if (currentGame === "aceclimber" && aceClimberGameOver) {
+            initAceClimber(); // Restart Ace Climber
+        }
+    }
+});
+</script>
+</body>
+</html>
